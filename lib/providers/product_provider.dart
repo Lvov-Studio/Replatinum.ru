@@ -77,4 +77,14 @@ class ProductProvider extends ChangeNotifier {
   void setCategory(Category? category) {
     fetchProducts(category: category);
   }
+
+  /// Сброс категории — возврат к экрану разделов
+  void clearCategory() {
+    _selectedCategory = null;
+    _products = [];
+    _total = 0;
+    _offset = 0;
+    _error = '';
+    notifyListeners();
+  }
 }
