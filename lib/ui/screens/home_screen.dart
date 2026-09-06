@@ -9,7 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/banner_slider.dart';
 import 'product_search_delegate.dart';
-import 'catalog_screen.dart';
+import 'main_screen.dart';
 import 'product_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -126,15 +126,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       final category = provider.categories[index];
                       return GestureDetector(
                         onTap: () {
-                          // Открываем каталог с фильтром по выбранной категории
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CatalogScreen(
-                                initialCategory: category,
-                              ),
-                            ),
-                          );
+                          // Переключаем таб каталога с фильтром — нижнее меню остаётся!
+                          MainScreen.of(context)?.switchToCatalog(category: category);
                         },
                         child: SizedBox(
                           width: 80,
@@ -234,39 +227,75 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Горизонтальная лента карточек товаров
-            SizedBox(
-              height: 240,
-              child: Consumer<ProductProvider>(
-                builder: (context, provider, _) {
-                  if (provider.isLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primaryAccent,
-                      ),
-                    );
-                  }
-                  if (provider.products.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: provider.products.length > 10
-                        ? 10
-                        : provider.products.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) {
-                      return _HomeProductCard(
-                        product: provider.products[index],
-                      );
-                    },
+            // ── Популярные товары: сетка 2 колонки ─────────────────
+            Consumer<ProductProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.primaryAccent),
+                    ),
                   );
-                },
-              ),
-            ),
+                }
+                if (provider.products.isEmpty) return const SizedBox.shrink();
 
-            const SizedBox(height: 24),
+                return Column(
+                  children: [
+                    // Сетка 2 колонки
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.62,
+                      ),
+                      itemCount: provider.products.length,
+                      itemBuilder: (context, index) =>
+                          _HomeProductCard(product: provider.products[index]),
+                    ),
+
+                    // Кнопка «Показать ещё»
+                    if (provider.hasMore)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: provider.isLoadingMore
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primaryAccent,
+                                    ),
+                                  ),
+                                )
+                              : OutlinedButton(
+                                  onPressed: () => provider.loadMore(),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primaryAccent,
+                                    side: const BorderSide(
+                                        color: AppColors.primaryAccent, width: 1.5),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10)),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                  child: Text(
+                                    'Показать ещё '
+                                    '(осталось ${provider.total - provider.products.length})',
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),

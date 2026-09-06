@@ -56,18 +56,25 @@ class ApiService {
     }
   }
 
-  Future<List<Product>> getProducts({String? categoryId}) async {
+  Future<Map<String, dynamic>> getProducts({
+    String? categoryId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
     try {
-      final response = await _dio.get(
-        'get_products.php',
-        queryParameters: categoryId != null ? {'section_id': categoryId} : null,
-      );
-      
+      final params = <String, dynamic>{'limit': limit, 'offset': offset};
+      if (categoryId != null) params['section_id'] = categoryId;
+
+      final response = await _dio.get('get_products.php', queryParameters: params);
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = response.data;
         if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
-          return data.map((json) => Product.fromJson(json)).toList();
+          return {
+            'products': data.map((json) => Product.fromJson(json)).toList(),
+            'total': jsonResponse['total'] ?? data.length,
+          };
         } else {
           throw Exception('Invalid response format or status');
         }

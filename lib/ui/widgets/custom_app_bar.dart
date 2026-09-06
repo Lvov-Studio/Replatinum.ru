@@ -22,16 +22,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.search, color: Colors.white),
-          tooltip: 'Поиск',
-          onPressed: () {
-            showSearch(
-              context: context,
-              delegate: ProductSearchDelegate(),
-            );
-          },
-        ),
-        IconButton(
           icon: const Icon(Icons.phone, color: Colors.white),
           onPressed: () async {
             final Uri url = Uri(scheme: 'tel', path: '+78000000000');

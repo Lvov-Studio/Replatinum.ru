@@ -6,6 +6,8 @@ import 'catalog_screen.dart';
 import 'cart_screen.dart';
 import 'placeholder_screens.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/product_provider.dart';
+import '../../data/models/category_model.dart';
 import '../../core/theme/app_colors.dart';
 
 class MainScreen extends StatefulWidget {
@@ -24,9 +26,13 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   void switchToTab(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+    setState(() => _currentIndex = index);
+  }
+
+  /// Переключиться на каталог с фильтром категории (нижнее меню остаётся!)
+  void switchToCatalog({Category? category}) {
+    context.read<ProductProvider>().setCategory(category);
+    setState(() => _currentIndex = 2);
   }
 
   final List<Widget> _screens = [

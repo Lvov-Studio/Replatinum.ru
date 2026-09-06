@@ -11,6 +11,7 @@ import 'product_detail_screen.dart';
 import 'product_search_delegate.dart';
 
 class CatalogScreen extends StatefulWidget {
+  // initialCategory оставляем для обратной совместимости (push из категории-экрана)
   final Category? initialCategory;
 
   const CatalogScreen({super.key, this.initialCategory});
@@ -24,56 +25,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().fetchProducts(
-        category: widget.initialCategory,
-      );
+      final provider = context.read<ProductProvider>();
+      // Если нам передали категорию через конструктор (редкий случай) — грузим её.
+      // Иначе — загружаем текущую (которую мог выставить MainScreen.switchToCatalog)
+      if (widget.initialCategory != null) {
+        provider.fetchProducts(category: widget.initialCategory);
+      } else if (provider.products.isEmpty) {
+        provider.fetchProducts();
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isFromCategory = widget.initialCategory != null;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      appBar: isFromCategory
-          ? AppBar(
-              backgroundColor: AppColors.darkAccent,
-              foregroundColor: Colors.white,
-              title: Text(
-                widget.initialCategory!.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search, color: Colors.white),
-                  onPressed: () {
-                    showSearch(
-                      context: context,
-                      delegate: ProductSearchDelegate(),
-                    );
-                  },
-                ),
-              ],
-            )
-          : const CustomAppBar(),
+      appBar: const CustomAppBar(),
       body: Column(
         children: [
-          // ── Строка поиска (как на главной) ───────────────
+          // ── Строка поиска ─────────────────────────────────
           Container(
             color: AppColors.darkAccent,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: GestureDetector(
-              onTap: () {
-                showSearch(
-                  context: context,
-                  delegate: ProductSearchDelegate(),
-                );
-              },
+              onTap: () => showSearch(
+                context: context,
+                delegate: ProductSearchDelegate(),
+              ),
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
@@ -86,10 +64,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     const Expanded(
                       child: Text(
                         'Поиск по каталогу...',
-                        style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontSize: 15,
-                        ),
+                        style: TextStyle(color: AppColors.secondaryText, fontSize: 15),
                       ),
                     ),
                     Container(
@@ -107,30 +82,54 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
           ),
 
-          // ── Сетка товаров ────────────────────────────────
+          // ── Чип активной категории ────────────────────────
+          Consumer<ProductProvider>(
+            builder: (context, provider, _) {
+              final cat = provider.selectedCategory;
+              if (cat == null) return const SizedBox.shrink();
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: Wrap(
+                  children: [
+                    Chip(
+                      label: Text(cat.name,
+                          style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.w600)),
+                      backgroundColor: AppColors.primaryAccent,
+                      deleteIcon:
+                          const Icon(Icons.close, size: 16, color: Colors.white),
+                      onDeleted: () => provider.fetchProducts(), // сброс фильтра
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          // ── Сетка товаров ─────────────────────────────────
           Expanded(
             child: Consumer<ProductProvider>(
-              builder: (context, provider, child) {
-                if (provider.isLoading) {
+              builder: (context, provider, _) {
+                if (provider.isLoading && provider.products.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(color: AppColors.primaryAccent),
                   );
                 }
 
-                if (provider.error.isNotEmpty) {
+                if (provider.error.isNotEmpty && provider.products.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.wifi_off, size: 64, color: AppColors.secondaryText),
                         const SizedBox(height: 16),
-                        Text(
-                          'Не удалось загрузить товары',
-                          style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
-                        ),
+                        const Text('Не удалось загрузить товары',
+                            style: TextStyle(color: AppColors.secondaryText, fontSize: 16)),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () => provider.fetchProducts(category: widget.initialCategory),
+                          onPressed: () => provider.fetchProducts(
+                              category: provider.selectedCategory),
                           child: const Text('Повторить'),
                         ),
                       ],
@@ -140,31 +139,68 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
                 if (provider.products.isEmpty) {
                   return const Center(
-                    child: Text(
-                      'Товары не найдены',
-                      style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
-                    ),
+                    child: Text('Товары не найдены',
+                        style: TextStyle(color: AppColors.secondaryText, fontSize: 16)),
                   );
                 }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 0.62,
-                  ),
-                  itemCount: provider.products.length,
-                  itemBuilder: (context, index) {
-                    return _ProductCard(product: provider.products[index]);
-                  },
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.all(12),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) =>
+                              _ProductCard(product: provider.products[index]),
+                          childCount: provider.products.length,
+                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.62,
+                        ),
+                      ),
+                    ),
+                    if (provider.hasMore)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: provider.isLoadingMore
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: CircularProgressIndicator(
+                                        color: AppColors.primaryAccent),
+                                  ))
+                              : OutlinedButton(
+                                  onPressed: () => provider.loadMore(),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primaryAccent,
+                                    side: const BorderSide(
+                                        color: AppColors.primaryAccent, width: 1.5),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10)),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                  child: Text(
+                                    'Показать ещё '
+                                    '(осталось ${provider.total - provider.products.length})',
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  ],
                 );
               },
             ),
-          ), // Expanded
+          ),
         ],
-      ), // Column
+      ),
     );
   }
 }
