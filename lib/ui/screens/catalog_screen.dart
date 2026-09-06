@@ -8,9 +8,10 @@ import '../../data/models/category_model.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import 'product_detail_screen.dart';
+import 'product_search_delegate.dart';
 
 class CatalogScreen extends StatefulWidget {
-  final Category? initialCategory; // если передана — фильтруем по ней
+  final Category? initialCategory;
 
   const CatalogScreen({super.key, this.initialCategory});
 
@@ -34,21 +35,38 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final isFromCategory = widget.initialCategory != null;
 
     return Scaffold(
-      // Если открыт из категории — показываем стандартный AppBar с названием и кнопкой назад
+      backgroundColor: const Color(0xFFF2F2F7),
       appBar: isFromCategory
           ? AppBar(
               backgroundColor: AppColors.darkAccent,
               foregroundColor: Colors.white,
               title: Text(
                 widget.initialCategory!.name,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search, color: Colors.white),
+                  onPressed: () {
+                    showSearch(
+                      context: context,
+                      delegate: ProductSearchDelegate(),
+                    );
+                  },
+                ),
+              ],
             )
           : const CustomAppBar(),
       body: Consumer<ProductProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryAccent),
+            );
           }
 
           if (provider.error.isNotEmpty) {
@@ -56,7 +74,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Ошибка: ${provider.error}', textAlign: TextAlign.center),
+                  const Icon(Icons.wifi_off, size: 64, color: AppColors.secondaryText),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Не удалось загрузить товары',
+                    style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => provider.fetchProducts(category: widget.initialCategory),
@@ -68,21 +91,25 @@ class _CatalogScreenState extends State<CatalogScreen> {
           }
 
           if (provider.products.isEmpty) {
-            return const Center(child: Text('Товары не найдены'));
+            return const Center(
+              child: Text(
+                'Товары не найдены',
+                style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
+              ),
+            );
           }
 
           return GridView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.65,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.62,
             ),
             itemCount: provider.products.length,
             itemBuilder: (context, index) {
-              final product = provider.products[index];
-              return _ProductCard(product: product);
+              return _ProductCard(product: provider.products[index]);
             },
           );
         },
@@ -98,89 +125,138 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProductDetailScreen(productPreview: product),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(productPreview: product),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          );
-        },
+          ],
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Фото товара
+            // ── Фото товара ──────────────────────────
             Expanded(
-              flex: 3,
-              child: product.image.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: product.image,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                      errorWidget: (context, url, error) => const Icon(
-                        Icons.image_not_supported,
-                        color: AppColors.secondaryText,
-                        size: 40,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.image,
-                      color: AppColors.secondaryText,
-                      size: 40,
-                    ),
+              flex: 5,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Container(
+                  color: const Color(0xFFF8F8F8),
+                  width: double.infinity,
+                  child: product.image.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: product.image,
+                          fit: BoxFit.contain,
+                          placeholder: (_, __) => const Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primaryAccent,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => const Center(
+                            child: Icon(
+                              Icons.image_outlined,
+                              size: 48,
+                              color: Color(0xFFCCCCCC),
+                            ),
+                          ),
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: 48,
+                            color: Color(0xFFCCCCCC),
+                          ),
+                        ),
+                ),
+              ),
             ),
-            // Информация о товаре
+
+            // ── Информация ────────────────────────────
             Expanded(
-              flex: 2,
+              flex: 4,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Название
                     Text(
                       product.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: 13,
-                            height: 1.2,
-                          ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.3,
+                        color: Color(0xFF1A1A1A),
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const Spacer(),
+
+                    // Цена
                     Text(
-                      product.price > 0 ? '${product.price.toInt()} ₽' : 'Цена по запросу',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primaryAccent,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      product.price > 0
+                          ? '${_formatPrice(product.price.toInt())} ₽'
+                          : 'Цена по запросу',
+                      style: TextStyle(
+                        fontSize: product.price > 0 ? 16 : 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryAccent,
+                        height: 1.2,
+                      ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
+
+                    // Кнопка В корзину
                     SizedBox(
                       width: double.infinity,
-                      height: 32,
+                      height: 34,
                       child: ElevatedButton(
                         onPressed: () {
                           context.read<CartProvider>().addItem(product);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('${product.name} добавлен в корзину'),
+                              content: const Text('Добавлено в корзину'),
                               duration: const Duration(seconds: 1),
+                              backgroundColor: AppColors.primaryAccent,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryAccent,
+                          foregroundColor: Colors.white,
                           padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
                         ),
-                        child: const Text('В корзину', style: TextStyle(fontSize: 12)),
+                        child: const Text(
+                          'В корзину',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ],
@@ -191,5 +267,16 @@ class _ProductCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatPrice(int price) {
+    // Форматируем цену с разделителем тысяч: 49990 → 49 990
+    final s = price.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('\u00A0'); // неразрывный пробел
+      buf.write(s[i]);
+    }
+    return buf.toString();
   }
 }
