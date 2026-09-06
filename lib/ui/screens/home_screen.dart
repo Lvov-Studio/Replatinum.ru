@@ -208,12 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CatalogScreen(),
-                        ),
-                      );
+                      MainScreen.of(context)?.switchToCatalog();
                     },
                     child: const Text(
                       'Все товары →',
