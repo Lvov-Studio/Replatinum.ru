@@ -15,6 +15,8 @@ class ProductProvider extends ChangeNotifier {
   int _offset = 0;
   static const int _pageSize = 10;
 
+  String? _type;
+
   List<Product> get products => _products;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
@@ -24,10 +26,11 @@ class ProductProvider extends ChangeNotifier {
   bool get hasMore => _products.length < _total;
 
   /// Первичная загрузка (с нуля)
-  Future<void> fetchProducts({Category? category}) async {
+  Future<void> fetchProducts({Category? category, String? type}) async {
     _isLoading = true;
     _error = '';
     _selectedCategory = category;
+    _type = type;
     _offset = 0;
     _products = [];
     notifyListeners();
@@ -35,6 +38,7 @@ class ProductProvider extends ChangeNotifier {
     try {
       final result = await _apiService.getProducts(
         categoryId: category?.id,
+        type: type,
         limit: _pageSize,
         offset: 0,
       );
@@ -58,6 +62,7 @@ class ProductProvider extends ChangeNotifier {
     try {
       final result = await _apiService.getProducts(
         categoryId: _selectedCategory?.id,
+        type: _type,
         limit: _pageSize,
         offset: _offset,
       );

@@ -58,12 +58,14 @@ class ApiService {
 
   Future<Map<String, dynamic>> getProducts({
     String? categoryId,
-    int limit = 20,
+    String? type,        // 'sale' | 'new' | 'hit'
+    int limit = 10,
     int offset = 0,
   }) async {
     try {
       final params = <String, dynamic>{'limit': limit, 'offset': offset};
       if (categoryId != null) params['section_id'] = categoryId;
+      if (type != null) params['type'] = type;
 
       final response = await _dio.get('get_products.php', queryParameters: params);
 
