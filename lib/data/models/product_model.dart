@@ -1,7 +1,7 @@
 class Product {
   final String id;
   final String name;
-  final String price;
+  final num price;
   final String image;
 
   Product({
@@ -15,7 +15,7 @@ class Product {
     return Product(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      price: json['price']?.toString() ?? '',
+      price: (json['price'] as num?) ?? 0,
       image: json['image']?.toString() ?? '',
     );
   }

@@ -7,6 +7,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/banner_slider.dart';
 import 'product_search_delegate.dart';
 import 'main_screen.dart';
+import 'catalog_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -122,8 +123,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       final category = provider.categories[index];
                       return GestureDetector(
                         onTap: () {
-                          // Переключаемся на вкладку Каталог (индекс 1)
-                          MainScreen.of(context)?.switchToTab(1);
+                          // Открываем каталог с фильтром по выбранной категории
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CatalogScreen(
+                                initialCategory: category,
+                              ),
+                            ),
+                          );
                         },
                         child: SizedBox(
                           width: 80,

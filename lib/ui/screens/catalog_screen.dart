@@ -4,12 +4,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../data/models/product_model.dart';
+import '../../data/models/category_model.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import 'product_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key});
+  final Category? initialCategory; // если передана — фильтруем по ней
+
+  const CatalogScreen({super.key, this.initialCategory});
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -20,14 +23,28 @@ class _CatalogScreenState extends State<CatalogScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().fetchProducts();
+      context.read<ProductProvider>().fetchProducts(
+        category: widget.initialCategory,
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isFromCategory = widget.initialCategory != null;
+
     return Scaffold(
-      appBar: const CustomAppBar(),
+      // Если открыт из категории — показываем стандартный AppBar с названием и кнопкой назад
+      appBar: isFromCategory
+          ? AppBar(
+              backgroundColor: AppColors.darkAccent,
+              foregroundColor: Colors.white,
+              title: Text(
+                widget.initialCategory!.name,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            )
+          : const CustomAppBar(),
       body: Consumer<ProductProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
@@ -42,7 +59,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   Text('Ошибка: ${provider.error}', textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => provider.fetchProducts(),
+                    onPressed: () => provider.fetchProducts(category: widget.initialCategory),
                     child: const Text('Повторить'),
                   ),
                 ],
@@ -60,7 +77,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.65, // Делаем карточку более вытянутой
+              childAspectRatio: 0.65,
             ),
             itemCount: provider.products.length,
             itemBuilder: (context, index) {
@@ -121,35 +138,37 @@ class _ProductCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       product.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: 14,
+                            fontSize: 13,
                             height: 1.2,
                           ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 4),
                     Text(
-                      '${product.price} ₽',
+                      product.price > 0 ? '${product.price.toInt()} ₽' : 'Цена по запросу',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: AppColors.primaryAccent,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
-                      height: 36, // Компактная кнопка
+                      height: 32,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Добавляем в корзину через провайдер
                           context.read<CartProvider>().addItem(product);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -161,7 +180,7 @@ class _ProductCard extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.zero,
                         ),
-                        child: const Text('В корзину', style: TextStyle(fontSize: 13)),
+                        child: const Text('В корзину', style: TextStyle(fontSize: 12)),
                       ),
                     ),
                   ],

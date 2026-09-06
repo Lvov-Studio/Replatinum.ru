@@ -56,9 +56,12 @@ class ApiService {
     }
   }
 
-  Future<List<Product>> getProducts() async {
+  Future<List<Product>> getProducts({String? categoryId}) async {
     try {
-      final response = await _dio.get('get_products.php');
+      final response = await _dio.get(
+        'get_products.php',
+        queryParameters: categoryId != null ? {'section_id': categoryId} : null,
+      );
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = response.data;

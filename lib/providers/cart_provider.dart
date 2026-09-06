@@ -24,10 +24,7 @@ class CartProvider extends ChangeNotifier {
   double get totalAmount {
     var total = 0.0;
     _items.forEach((key, item) {
-      // Пытаемся распарсить цену (например, "15000" или "15000.50")
-      final priceString = item.product.price.replaceAll(RegExp(r'[^0-9\.]'), '');
-      final price = double.tryParse(priceString) ?? 0.0;
-      total += price * item.quantity;
+      total += item.product.price * item.quantity;
     });
     return total;
   }
