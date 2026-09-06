@@ -12,10 +12,20 @@ class MainScreen extends StatefulWidget {
 
   @override
   State<MainScreen> createState() => _MainScreenState();
+
+  static _MainScreenState? of(BuildContext context) {
+    return context.findAncestorStateOfType<_MainScreenState>();
+  }
 }
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+
+  void switchToTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   final List<Widget> _screens = [
     const HomeScreen(),

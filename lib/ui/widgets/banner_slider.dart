@@ -14,12 +14,20 @@ class BannerSlider extends StatefulWidget {
 
 class _BannerSliderState extends State<BannerSlider> {
   final ApiService _apiService = ApiService();
+  // Кешируем Future — без этого FutureBuilder перезапускал запрос при каждом setState
+  late final Future<List<BannerModel>> _bannersFuture;
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannersFuture = _apiService.getBanners();
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<BannerModel>>(
-      future: _apiService.getBanners(),
+      future: _bannersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -29,7 +37,6 @@ class _BannerSliderState extends State<BannerSlider> {
         }
 
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          // Если ошибка или нет баннеров, просто не показываем слайдер (или можно показать заглушку)
           return const SizedBox.shrink();
         }
 
@@ -39,11 +46,13 @@ class _BannerSliderState extends State<BannerSlider> {
           children: [
             CarouselSlider(
               options: CarouselOptions(
-                height: 180.0,
+                height: 190.0,
                 autoPlay: true,
                 autoPlayInterval: const Duration(seconds: 4),
-                enlargeCenterPage: true,
-                viewportFraction: 0.9,
+                autoPlayAnimationDuration: const Duration(milliseconds: 600),
+                autoPlayCurve: Curves.easeInOut,
+                enlargeCenterPage: false,   // Убрали — вызывало обрезку соседних слайдов
+                viewportFraction: 1.0,       // Каждый баннер занимает полную ширину
                 onPageChanged: (index, reason) {
                   setState(() {
                     _currentIndex = index;
@@ -55,7 +64,7 @@ class _BannerSliderState extends State<BannerSlider> {
                   builder: (BuildContext context) {
                     return Container(
                       width: MediaQuery.of(context).size.width,
-                      margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                      margin: const EdgeInsets.symmetric(horizontal: 16.0),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1F1F1F),
                         borderRadius: BorderRadius.circular(16),
@@ -81,7 +90,7 @@ class _BannerSliderState extends State<BannerSlider> {
                                 errorWidget: (context, url, error) => const SizedBox.shrink(),
                               ),
                             ),
-                          
+
                           // Контент слева
                           Padding(
                             padding: const EdgeInsets.all(16.0),
@@ -105,7 +114,7 @@ class _BannerSliderState extends State<BannerSlider> {
                                     ),
                                   ),
                                 if (banner.badge.isNotEmpty) const SizedBox(height: 8),
-                                
+
                                 Text(
                                   banner.title,
                                   style: const TextStyle(
@@ -117,7 +126,7 @@ class _BannerSliderState extends State<BannerSlider> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
-                                
+
                                 if (banner.subtitle.isNotEmpty)
                                   Text(
                                     banner.subtitle,
@@ -128,9 +137,9 @@ class _BannerSliderState extends State<BannerSlider> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                
+
                                 const Spacer(),
-                                
+
                                 ElevatedButton(
                                   onPressed: () {
                                     // Переход по ссылке banner.link
@@ -158,16 +167,19 @@ class _BannerSliderState extends State<BannerSlider> {
               }).toList(),
             ),
             const SizedBox(height: 8),
+            // Индикаторы
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: banners.asMap().entries.map((entry) {
-                return Container(
-                  width: 8.0,
+                final isActive = _currentIndex == entry.key;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: isActive ? 20.0 : 8.0,
                   height: 8.0,
-                  margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 3.0),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentIndex == entry.key
+                    borderRadius: BorderRadius.circular(4),
+                    color: isActive
                         ? AppColors.primaryAccent
                         : AppColors.secondaryText.withValues(alpha: 0.3),
                   ),
