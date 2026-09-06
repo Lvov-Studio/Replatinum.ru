@@ -61,59 +61,110 @@ class _CatalogScreenState extends State<CatalogScreen> {
               ],
             )
           : const CustomAppBar(),
-      body: Consumer<ProductProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryAccent),
-            );
-          }
-
-          if (provider.error.isNotEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.wifi_off, size: 64, color: AppColors.secondaryText),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Не удалось загрузить товары',
-                    style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.fetchProducts(category: widget.initialCategory),
-                    child: const Text('Повторить'),
-                  ),
-                ],
+      body: Column(
+        children: [
+          // ── Строка поиска (как на главной) ───────────────
+          Container(
+            color: AppColors.darkAccent,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: GestureDetector(
+              onTap: () {
+                showSearch(
+                  context: context,
+                  delegate: ProductSearchDelegate(),
+                );
+              },
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        'Поиск по каталогу...',
+                        style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.search, color: Colors.white),
+                    ),
+                  ],
+                ),
               ),
-            );
-          }
-
-          if (provider.products.isEmpty) {
-            return const Center(
-              child: Text(
-                'Товары не найдены',
-                style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
-              ),
-            );
-          }
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.62,
             ),
-            itemCount: provider.products.length,
-            itemBuilder: (context, index) {
-              return _ProductCard(product: provider.products[index]);
-            },
-          );
-        },
-      ),
+          ),
+
+          // ── Сетка товаров ────────────────────────────────
+          Expanded(
+            child: Consumer<ProductProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primaryAccent),
+                  );
+                }
+
+                if (provider.error.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.wifi_off, size: 64, color: AppColors.secondaryText),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Не удалось загрузить товары',
+                          style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => provider.fetchProducts(category: widget.initialCategory),
+                          child: const Text('Повторить'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (provider.products.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Товары не найдены',
+                      style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
+                    ),
+                  );
+                }
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.62,
+                  ),
+                  itemCount: provider.products.length,
+                  itemBuilder: (context, index) {
+                    return _ProductCard(product: provider.products[index]);
+                  },
+                );
+              },
+            ),
+          ), // Expanded
+        ],
+      ), // Column
     );
   }
 }

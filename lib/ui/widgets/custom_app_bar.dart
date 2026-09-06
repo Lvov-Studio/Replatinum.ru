@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
+import '../screens/product_search_delegate.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomAppBar({super.key});
@@ -21,9 +22,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         IconButton(
+          icon: const Icon(Icons.search, color: Colors.white),
+          tooltip: 'Поиск',
+          onPressed: () {
+            showSearch(
+              context: context,
+              delegate: ProductSearchDelegate(),
+            );
+          },
+        ),
+        IconButton(
           icon: const Icon(Icons.phone, color: Colors.white),
           onPressed: () async {
-            final Uri url = Uri(scheme: 'tel', path: '+78000000000'); // Замените на реальный номер
+            final Uri url = Uri(scheme: 'tel', path: '+78000000000');
             if (await canLaunchUrl(url)) {
               await launchUrl(url);
             } else {
