@@ -1,0 +1,54 @@
+name: 🚀 Build Flutter APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Позволяет запускать вручную из вкладки Actions
+
+jobs:
+  build-android:
+    name: 📱 Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.8'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Install dependencies
+        run: flutter pub get
+
+      - name: 🔍 Analyze code
+        run: flutter analyze --no-fatal-infos
+
+      - name: 🏗️ Build APK (release)
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: 📤 Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlatinumStore-APK-${{ github.sha }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: ✅ Build Summary
+        run: |
+          echo "## 📱 APK Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK:** Download from Artifacts above ⬆️" >> $GITHUB_STEP_SUMMARY
