@@ -6,7 +6,6 @@ import '../../core/theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/banner_slider.dart';
 import 'product_search_delegate.dart';
-import 'main_screen.dart';
 import 'catalog_screen.dart';
 
 class HomeScreen extends StatefulWidget {

@@ -13,6 +13,7 @@ class MainScreen extends StatefulWidget {
   @override
   State<MainScreen> createState() => _MainScreenState();
 
+  // ignore: library_private_types_in_public_api
   static _MainScreenState? of(BuildContext context) {
     return context.findAncestorStateOfType<_MainScreenState>();
   }
