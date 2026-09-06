@@ -3,6 +3,7 @@ import '../models/category_model.dart';
 import '../models/product_model.dart';
 import '../models/product_detail_model.dart';
 import '../models/banner_model.dart';
+import '../models/news_model.dart';
 
 class ApiService {
   late final Dio _dio;
@@ -171,6 +172,21 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error getting banners: $e');
+    }
+  }
+
+  Future<List<NewsItem>> getNews({int limit = 8}) async {
+    try {
+      final response = await _dio.get('get_news.php', queryParameters: {'limit': limit});
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = response.data;
+        if (json['status'] == 'success' && json['data'] != null) {
+          return (json['data'] as List).map((e) => NewsItem.fromJson(e as Map<String, dynamic>)).toList();
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 }

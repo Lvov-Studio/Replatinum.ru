@@ -10,12 +10,28 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: AppColors.darkAccent,
       centerTitle: true,
+      leading: Builder(
+        builder: (ctx) => IconButton(
+          padding: const EdgeInsets.all(8),
+          icon: Container(
+            width: 38, height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
+          ),
+          onPressed: () => Scaffold.of(ctx).openDrawer(),
+        ),
+      ),
       title: RichText(
         text: const TextSpan(
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          style: TextStyle(
+              fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
           children: [
             TextSpan(text: 're', style: TextStyle(color: Colors.white)),
-            TextSpan(text: 'platinum', style: TextStyle(color: AppColors.primaryAccent)),
+            TextSpan(text: 'platinum',
+                style: TextStyle(color: AppColors.primaryAccent)),
           ],
         ),
       ),
@@ -29,7 +45,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             } else {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Не удалось открыть набор номера')),
+                  const SnackBar(
+                      content: Text('Не удалось открыть набор номера')),
                 );
               }
             }

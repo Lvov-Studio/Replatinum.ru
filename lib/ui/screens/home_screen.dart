@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../data/api/api_service.dart';
 import '../../data/models/product_model.dart';
+import '../../data/models/news_model.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/banner_slider.dart';
@@ -25,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Product>> _saleFuture;
   late Future<List<Product>> _newFuture;
   late Future<List<Product>> _hitFuture;
+  late Future<List<NewsItem>> _newsFuture;
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _saleFuture = _loadSection('sale');
     _newFuture  = _loadSection('new');
     _hitFuture  = _loadSection('hit');
+    _newsFuture = _api.getNews(limit: 8);
   }
 
   Future<List<Product>> _loadSection(String type) async {
@@ -128,6 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
               future: _hitFuture,
             ),
 
+            // ── Новости и обзоры ──────────────────────────
+            _NewsSection(future: _newsFuture),
+
             const SizedBox(height: 24),
           ],
         ),
@@ -206,8 +213,8 @@ class _CategoriesRow extends StatelessWidget {
   }
 }
 
-// ─── Секция (Акции / Новинки / Хиты продаж) ───────────────────────────────
-class _SectionBlock extends StatelessWidget {
+// ─── Секция (Акции / Новинки / Хиты продаж) — горизонтальный свайп ────────
+class _SectionBlock extends StatefulWidget {
   final String title;
   final String badge;
   final Color badgeColor;
@@ -221,20 +228,53 @@ class _SectionBlock extends StatelessWidget {
   });
 
   @override
+  State<_SectionBlock> createState() => _SectionBlockState();
+}
+
+class _SectionBlockState extends State<_SectionBlock> {
+  int _currentPage = 0;
+  late final PageController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = PageController();
+    _ctrl.addListener(() {
+      final page = _ctrl.page?.round() ?? 0;
+      if (page != _currentPage) setState(() => _currentPage = page);
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Product>>(
-      future: future,
+      future: widget.future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Center(
-                child: CircularProgressIndicator(
-                    color: AppColors.primaryAccent)),
+                child: CircularProgressIndicator(color: AppColors.primaryAccent)),
           );
         }
         final products = snapshot.data ?? [];
         if (products.isEmpty) return const SizedBox.shrink();
+
+        // Группируем по 2 карточки на одну «страницу»
+        final pages = <List<Product>>[];
+        for (int i = 0; i < products.length; i += 2) {
+          pages.add(products.sublist(
+              i, (i + 2) > products.length ? products.length : (i + 2)));
+        }
+
+        final screenW = MediaQuery.of(context).size.width;
+        final cardH = (screenW / 2 - 22) / 0.6;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,30 +282,68 @@ class _SectionBlock extends StatelessWidget {
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Text(title,
+              child: Text(widget.title,
                   style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: AppColors.mainText)),
             ),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 0.6,
-              ),
-              itemCount: products.length,
-              itemBuilder: (_, i) => _ProductCard(
-                product: products[i],
-                badge: badge,
-                badgeColor: badgeColor,
+            SizedBox(
+              height: cardH,
+              child: PageView.builder(
+                controller: _ctrl,
+                itemCount: pages.length,
+                itemBuilder: (_, pageIndex) {
+                  final pair = pages[pageIndex];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ProductCard(
+                              product: pair[0],
+                              badge: widget.badge,
+                              badgeColor: widget.badgeColor),
+                        ),
+                        const SizedBox(width: 10),
+                        if (pair.length > 1)
+                          Expanded(
+                            child: _ProductCard(
+                                product: pair[1],
+                                badge: widget.badge,
+                                badgeColor: widget.badgeColor),
+                          )
+                        else
+                          const Expanded(child: SizedBox()),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
+            // Индикаторы страниц (активная точка двигается)
+            if (pages.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(pages.length, (i) {
+                    final isActive = i == _currentPage;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: isActive ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(3),
+                        color: isActive
+                            ? widget.badgeColor
+                            : const Color(0xFFDDDDDD),
+                      ),
+                    );
+                  }),
+                ),
+              ),
           ],
         );
       },
@@ -426,6 +504,157 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Секция Новости и обзоры ───────────────────────────────────────────────
+class _NewsSection extends StatelessWidget {
+  final Future<List<NewsItem>> future;
+  const _NewsSection({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<NewsItem>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator(color: AppColors.primaryAccent)),
+          );
+        }
+        final news = snapshot.data ?? [];
+        if (news.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 4, 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Новости и обзоры',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.mainText)),
+                  TextButton(
+                    onPressed: () async {
+                      final uri = Uri.parse('https://replatinum.ru/news/');
+                      if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
+                    child: const Text('Все статьи →',
+                        style: TextStyle(color: AppColors.primaryAccent, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 280,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: news.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, i) => _NewsCard(item: news[i]),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Карточка новости ──────────────────────────────────────────────────────
+class _NewsCard extends StatelessWidget {
+  final NewsItem item;
+  const _NewsCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final uri = Uri.parse('https://replatinum.ru${item.url}');
+        if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+      },
+      child: Container(
+        width: 220,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Фото
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: item.image.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: item.image,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          color: const Color(0xFFF0F0F0),
+                          child: const Center(child: Icon(Icons.article_outlined, size: 48, color: Color(0xFFCCCCCC))),
+                        ),
+                      )
+                    : Container(
+                        color: const Color(0xFFF0F0F0),
+                        child: const Center(child: Icon(Icons.article_outlined, size: 48, color: Color(0xFFCCCCCC))),
+                      ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Категория
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryAccent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      item.category.toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryAccent,
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Заголовок
+                  Text(item.title,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 8),
+                  // Читать
+                  Text('Читать',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryAccent)),
+                ],
               ),
             ),
           ],

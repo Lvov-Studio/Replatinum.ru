@@ -9,6 +9,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../data/models/category_model.dart';
 import '../../core/theme/app_colors.dart';
+import '../widgets/burger_menu.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -52,6 +53,7 @@ class _MainScreenState extends State<MainScreen> {
     ));
 
     return Scaffold(
+      drawer: const BurgerMenu(),
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
