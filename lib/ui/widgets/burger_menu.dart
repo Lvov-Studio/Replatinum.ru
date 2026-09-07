@@ -5,7 +5,8 @@ import '../../providers/category_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../screens/main_screen.dart';
 import '../screens/product_search_delegate.dart';
-import '../screens/webview_screen.dart';
+import '../screens/info_screens.dart';
+import '../screens/service_tradein_screens.dart';
 
 class BurgerMenu extends StatefulWidget {
   const BurgerMenu({super.key});
@@ -18,23 +19,26 @@ class _BurgerMenuState extends State<BurgerMenu> {
   bool _buyerExpanded = false;
 
   static const _buyerItems = [
-    _BuyerItem(icon: Icons.build_outlined,     label: 'Сервисный центр', url: '/service/'),
-    _BuyerItem(icon: Icons.swap_horiz,         label: 'Trade-in',        url: '/trade-in/'),
-    _BuyerItem(icon: Icons.credit_card,        label: 'Рассрочка',       url: '/rassrochka/'),
-    _BuyerItem(icon: Icons.local_shipping_outlined, label: 'Доставка',   url: '/dostavka/'),
-    _BuyerItem(icon: Icons.security_outlined,  label: 'Гарантия',        url: '/garantiya/'),
-    _BuyerItem(icon: Icons.location_on_outlined, label: 'Контакты',      url: '/kontakty/'),
+    _BuyerItem(icon: Icons.build_outlined,          label: 'Сервисный центр', screenType: 'service'),
+    _BuyerItem(icon: Icons.swap_horiz,              label: 'Trade-in',        screenType: 'tradein'),
+    _BuyerItem(icon: Icons.credit_card,             label: 'Рассрочка',       screenType: 'credit'),
+    _BuyerItem(icon: Icons.local_shipping_outlined, label: 'Доставка',        screenType: 'delivery'),
+    _BuyerItem(icon: Icons.security_outlined,       label: 'Гарантия',         screenType: 'warranty'),
+    _BuyerItem(icon: Icons.location_on_outlined,    label: 'Контакты',         screenType: 'contacts'),
   ];
 
-  void _openUrl(String path, String title) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => WebViewScreen(
-          url: 'https://replatinum.ru$path',
-          title: title,
-        ),
-      ),
-    );
+  void _openNativeScreen(String screenType) {
+    Widget screen;
+    switch (screenType) {
+      case 'service':  screen = const ServiceScreen(); break;
+      case 'tradein':  screen = const TradeInScreen(); break;
+      case 'credit':   screen = const CreditScreen(); break;
+      case 'delivery': screen = const DeliveryScreen(); break;
+      case 'warranty': screen = const WarrantyScreen(); break;
+      case 'contacts': screen = const ContactsScreen(); break;
+      default: return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -188,7 +192,7 @@ class _BurgerMenuState extends State<BurgerMenu> {
                           return InkWell(
                             onTap: () {
                               Navigator.of(context).pop();
-                              _openUrl(item.url, item.label);
+                              _openNativeScreen(item.screenType);
                             },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -307,6 +311,6 @@ class _CategoryTile extends StatelessWidget {
 class _BuyerItem {
   final IconData icon;
   final String label;
-  final String url;
-  const _BuyerItem({required this.icon, required this.label, required this.url});
+  final String screenType;
+  const _BuyerItem({required this.icon, required this.label, required this.screenType});
 }
