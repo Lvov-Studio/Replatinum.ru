@@ -278,27 +278,34 @@ class _CategoryTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           children: [
-            // Картинка
+            // Картинка категории
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 width: 52, height: 52,
                 color: const Color(0xFFF2F2F7),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.contain,
-                          errorWidget: (_, __, ___) =>
-                              const Icon(Icons.category_outlined,
-                                  color: AppColors.secondaryText),
-                        )
-                      : const Icon(Icons.category_outlined,
-                          color: AppColors.secondaryText),
-                ),
+                child: imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        placeholder: (_, __) => const SizedBox.shrink(),
+                        errorWidget: (_, __, ___) => const Center(
+                          child: Icon(Icons.category_outlined,
+                              color: AppColors.secondaryText, size: 24)),
+                        imageBuilder: (_, imageProvider) => Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                image: imageProvider,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : const Center(
+                        child: Icon(Icons.category_outlined,
+                            color: AppColors.secondaryText, size: 24)),
               ),
             ),
             const SizedBox(width: 12),
