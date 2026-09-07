@@ -588,7 +588,7 @@ class _NewsCard extends StatelessWidget {
         if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
       },
       child: Container(
-        width: 220,
+        width: (MediaQuery.of(context).size.width - 48) / 2,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),

@@ -38,7 +38,13 @@ class _BurgerMenuState extends State<BurgerMenu> {
       case 'contacts': screen = const ContactsScreen(); break;
       default: return;
     }
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    // Открываем через навигатор текущего таба — нижнее меню остаётся
+    final tabNav = MainScreen.tabNavigatorKeys[MainScreen.currentTabIndex].currentState;
+    if (tabNav != null) {
+      tabNav.push(MaterialPageRoute(builder: (_) => screen));
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    }
   }
 
   @override
@@ -52,9 +58,23 @@ class _BurgerMenuState extends State<BurgerMenu> {
             // ── Шапка ─────────────────────────────────────
             Container(
               color: AppColors.darkAccent,
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+              padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
               child: Row(
                 children: [
+                  // Иконка ≡ слева (закрыть drawer)
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.menu, color: Colors.white, size: 22),
+                    ),
+                  ),
+                  const Spacer(),
+                  // Логотип справа
                   RichText(
                     text: const TextSpan(
                       style: TextStyle(
@@ -67,18 +87,6 @@ class _BurgerMenuState extends State<BurgerMenu> {
                             text: 'platinum',
                             style: TextStyle(color: AppColors.primaryAccent)),
                       ],
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.close, color: Colors.white, size: 20),
                     ),
                   ),
                 ],
@@ -271,23 +279,27 @@ class _CategoryTile extends StatelessWidget {
         child: Row(
           children: [
             // Картинка
-            Container(
-              width: 52, height: 52,
-              decoration: BoxDecoration(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 52, height: 52,
                 color: const Color(0xFFF2F2F7),
-                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.contain,
+                          errorWidget: (_, __, ___) =>
+                              const Icon(Icons.category_outlined,
+                                  color: AppColors.secondaryText),
+                        )
+                      : const Icon(Icons.category_outlined,
+                          color: AppColors.secondaryText),
+                ),
               ),
-              padding: const EdgeInsets.all(4),
-              child: imageUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.contain,
-                      errorWidget: (_, __, ___) =>
-                          const Icon(Icons.category_outlined,
-                              color: AppColors.secondaryText),
-                    )
-                  : const Icon(Icons.category_outlined,
-                      color: AppColors.secondaryText),
             ),
             const SizedBox(width: 12),
             // Название

@@ -17,6 +17,14 @@ class MainScreen extends StatefulWidget {
   // GlobalKey для открытия drawer из CustomAppBar
   static final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Вложенные навигаторы для каждого таба (нижнее меню не исчезает)
+  static final tabNavigatorKeys = List.generate(
+    5, (_) => GlobalKey<NavigatorState>(),
+  );
+
+  // Текущий активный таб (для burger menu)
+  static int currentTabIndex = 0;
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 
@@ -33,24 +41,37 @@ class _MainScreenState extends State<MainScreen> {
     // Если уже на Каталоге (index 2) и тапаем снова — сброс на главный раздел
     if (index == 2 && _currentIndex == 2) {
       context.read<ProductProvider>().clearCategory();
+      // Также попаем до корня в навигаторе каталога
+      final navState = MainScreen.tabNavigatorKeys[2].currentState;
+      if (navState != null && navState.canPop()) navState.popUntil((r) => r.isFirst);
       return;
     }
+    MainScreen.currentTabIndex = index;
     setState(() => _currentIndex = index);
   }
 
-  /// Переключиться на каталог с фильтром категории (нижнее меню остаётся!)
+  /// Переключиться на каталог с фильтром категории
   void switchToCatalog({Category? category}) {
     context.read<ProductProvider>().setCategory(category);
+    MainScreen.currentTabIndex = 2;
     setState(() => _currentIndex = 2);
   }
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const FavoritesScreen(),   // Избранное (заглушка)
-    const CatalogScreen(),
-    const CartScreen(),
-    const ProfileScreen(),
-  ];
+  Widget _buildTabScreen(int index) {
+    const screens = [
+      HomeScreen(),
+      FavoritesScreen(),
+      CatalogScreen(),
+      CartScreen(),
+      ProfileScreen(),
+    ];
+    return Navigator(
+      key: MainScreen.tabNavigatorKeys[index],
+      onGenerateRoute: (_) => MaterialPageRoute(
+        builder: (_) => screens[index],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,14 +81,25 @@ class _MainScreenState extends State<MainScreen> {
       statusBarIconBrightness: Brightness.light,
     ));
 
-    return Scaffold(
-      key: MainScreen.scaffoldKey,
-      drawer: const BurgerMenu(),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+    return PopScope(
+      // Перехватываем кнопку «Назад» — сначала пробуем поп внутри таба
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final navState = MainScreen.tabNavigatorKeys[_currentIndex].currentState;
+        if (navState != null && navState.canPop()) {
+          navState.pop();
+        }
+      },
+      child: Scaffold(
+        key: MainScreen.scaffoldKey,
+        drawer: const BurgerMenu(),
+        body: IndexedStack(
+          index: _currentIndex,
+          children: List.generate(5, _buildTabScreen),
+        ),
+        bottomNavigationBar: _buildBottomNav(context),
       ),
-      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 

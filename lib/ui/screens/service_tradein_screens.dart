@@ -208,21 +208,25 @@ class TradeInScreen extends StatefulWidget {
 }
 
 class _TradeInScreenState extends State<TradeInScreen> {
-  final _formKey  = GlobalKey<FormState>();
-  final _typeCtrl  = TextEditingController();
-  final _modelCtrl = TextEditingController();
-  final _nameCtrl  = TextEditingController();
-  final _phoneCtrl = TextEditingController();
+  final _formKey   = GlobalKey<FormState>();
+  final _modelCtrl   = TextEditingController();
+  final _nameCtrl    = TextEditingController();
+  final _phoneCtrl   = TextEditingController();
+  final _batteryCtrl = TextEditingController();
+  final _commentCtrl = TextEditingController();
   String? _selectedType;
+  String? _selectedCondition;
   bool _loading = false;
   bool _success = false;
 
-  static const _deviceTypes = ['Смартфон', 'Планшет', 'Ноутбук', 'Моноблок', 'Умные часы'];
+  static const _deviceTypes    = ['Смартфон', 'Планшет', 'Ноутбук', 'Моноблок', 'Умные часы'];
+  static const _conditionTypes = ['Отличное', 'Хорошее', 'Удовлетворительное', 'Требует ремонта'];
 
   @override
   void dispose() {
-    _typeCtrl.dispose(); _modelCtrl.dispose();
-    _nameCtrl.dispose(); _phoneCtrl.dispose();
+    _modelCtrl.dispose(); _nameCtrl.dispose();
+    _phoneCtrl.dispose(); _batteryCtrl.dispose();
+    _commentCtrl.dispose();
     super.dispose();
   }
 
@@ -231,15 +235,18 @@ class _TradeInScreenState extends State<TradeInScreen> {
     setState(() => _loading = true);
     try {
       final dio = Dio();
-      final data = FormData.fromMap({
-        'action': 'tradein_estimate',
-        'type':   _selectedType ?? '',
-        'brand':  'Apple',
-        'model':  _modelCtrl.text.trim(),
-        'name':   _nameCtrl.text.trim(),
-        'phone':  _phoneCtrl.text.trim(),
+      final formData = FormData.fromMap({
+        'action':    'tradein_estimate',
+        'type':      _selectedType ?? '',
+        'brand':     'Apple',
+        'model':     _modelCtrl.text.trim(),
+        'condition': _selectedCondition ?? '',
+        'battery':   _batteryCtrl.text.trim(),
+        'comment':   _commentCtrl.text.trim(),
+        'name':      _nameCtrl.text.trim(),
+        'phone':     _phoneCtrl.text.trim(),
       });
-      final res = await dio.post('https://replatinum.ru/local/ajax/tradein_estimate.php', data: data);
+      final res = await dio.post('https://replatinum.ru/local/ajax/tradein_estimate.php', data: formData);
       if (res.data != null && res.data['success'] == true) {
         setState(() => _success = true);
       } else {
@@ -426,7 +433,8 @@ class _TradeInScreenState extends State<TradeInScreen> {
                     const Row(children: [
                       Icon(Icons.calculate_outlined, color: AppColors.primaryAccent),
                       SizedBox(width: 8),
-                      Text('Рассчитать примерную стоимость', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Expanded(child: Text('Рассчитать примерную стоимость',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
                     ]),
                     const SizedBox(height: 6),
                     const Text('Заполните форму, и мы рассчитаем стоимость вашего устройства.',
@@ -448,6 +456,32 @@ class _TradeInScreenState extends State<TradeInScreen> {
                     _FormField(controller: _modelCtrl, label: 'Модель *',
                         hint: 'Например: iPhone 13 Pro, 256 GB',
                         validator: (v) => v!.isEmpty ? 'Укажите модель' : null),
+                    const SizedBox(height: 12),
+
+                    // Состояние устройства
+                    const Text('Состояние устройства *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.secondaryText)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedCondition,
+                      decoration: _inputDecoration('Выберите состояние'),
+                      items: _conditionTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                      onChanged: (v) => setState(() => _selectedCondition = v),
+                      validator: (v) => v == null ? 'Укажите состояние устройства' : null,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Аккумулятор
+                    _FormField(controller: _batteryCtrl, label: 'Ёмкость аккумулятора, % *',
+                        hint: 'Например: 85',
+                        keyboardType: TextInputType.number,
+                        validator: (v) => v!.isEmpty ? 'Укажите % аккумулятора' : null),
+                    const SizedBox(height: 12),
+
+                    // Комментарий
+                    _FormField(controller: _commentCtrl, label: 'Комментарий *',
+                        hint: 'Доп. информация: царапины, трещины, комплектация...',
+                        maxLines: 3,
+                        validator: (v) => v!.isEmpty ? 'Добавьте комментарий' : null),
                     const SizedBox(height: 12),
 
                     Row(children: [

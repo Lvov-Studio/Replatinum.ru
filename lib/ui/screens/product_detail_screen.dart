@@ -147,6 +147,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  /// Определяет внутренние коды Bitrix (без пробелов, смесь регистров латиницы, 5–16 символов)
+  /// Примеры: "0hkw3xU2", "ZMTq2w28", "LM1hMNjg"
+  bool _isBitrixCode(String val) {
+    final v = val.trim();
+    if (v.isEmpty || v.contains(' ') || v.length < 5 || v.length > 16) return false;
+    // Должен содержать смесь верхнего и нижнего регистра (или цифры + буквы)
+    final hasUpper  = v.contains(RegExp(r'[A-Z]'));
+    final hasLower  = v.contains(RegExp(r'[a-z]'));
+    final hasCyrillic = v.contains(RegExp(r'[а-яА-ЯёЁ]'));
+    // Кириллица — нормальное значение (не код)
+    if (hasCyrillic) return false;
+    // Смесь регистров без кириллицы → скорее всего код
+    return hasUpper && hasLower;
+  }
+
   Widget _buildContent(ProductDetail detail) {
     // Фото: если выбран оффер с фото — показываем его, иначе галерея товара
     final offerImg = _selectedOffer?.image ?? '';
@@ -155,27 +170,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ? _selectedOffer!.price
         : detail.price;
 
-    // Группируем свойства офферов по названию свойства
-    final Map<String, List<Offer>> groupedOffers = {};
-    for (final offer in detail.offers) {
-      for (final prop in offer.properties) {
-        groupedOffers.putIfAbsent(prop.name, () => []);
-        if (!groupedOffers[prop.name]!.contains(offer)) {
-          groupedOffers[prop.name]!.add(offer);
-        }
-      }
-    }
-
-    // Уникальные значения по каждому свойству
+    // Только реальные торговые вариации: свойства с 2+ разными значениями
     final Map<String, List<String>> propValues = {};
-    for (final entry in groupedOffers.entries) {
-      final vals = <String>{};
-      for (final offer in entry.value) {
+    if (detail.offers.isNotEmpty) {
+      // Собираем уникальные значения каждого свойства по всем офферам
+      final Map<String, Set<String>> allVals = {};
+      for (final offer in detail.offers) {
         for (final p in offer.properties) {
-          if (p.name == entry.key) vals.add(p.value);
+          allVals.putIfAbsent(p.name, () => {}).add(p.value);
         }
       }
-      propValues[entry.key] = vals.toList();
+
+      allVals.forEach((name, vals) {
+        // ✅ Только если есть минимум 2 разные вариации
+        if (vals.length < 2) return;
+
+        final valList = vals.toList();
+
+        // ❌ Пропускаем свойство "Галерея" и похожие
+        final nameLower = name.toLowerCase();
+        if (nameLower.contains('галерея') ||
+            nameLower.contains('gallery') ||
+            nameLower.contains('фото') ||
+            nameLower.contains('photo')) { return; }
+
+        // ❌ Пропускаем если значения — массивы файловых ID Bitrix: "[123, 456, ...]"
+        if (valList.every((v) => v.trim().startsWith('['))) return;
+
+        // ❌ Пропускаем если все значения выглядят как внутренние коды Bitrix
+        //    (без пробелов, смесь верхнего/нижнего регистра латиницы, 5-16 символов)
+        if (valList.every((v) => _isBitrixCode(v))) return;
+
+        propValues[name] = valList;
+      });
     }
 
     return SingleChildScrollView(

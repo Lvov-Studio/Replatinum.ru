@@ -739,44 +739,73 @@ class _ContactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0,2))],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primaryAccent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0,2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Иконка + метка
+            Row(children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: AppColors.primaryAccent, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(label, style: const TextStyle(
+                  fontSize: 12, color: AppColors.secondaryText, fontWeight: FontWeight.w500)),
+            ]),
+            const SizedBox(height: 10),
+            // Значение
+            Text(value, style: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.mainText)),
+            const SizedBox(height: 4),
+            // Подсказка
+            Text(note, style: const TextStyle(
+                fontSize: 13, color: AppColors.secondaryText, height: 1.4)),
+            const SizedBox(height: 12),
+            // Кнопка
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onTap,
+                icon: Icon(_iconForAction(actionLabel), size: 14),
+                label: Text(actionLabel),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryAccent,
+                  side: const BorderSide(color: AppColors.primaryAccent, width: 1),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
             ),
-            child: Icon(icon, color: AppColors.primaryAccent, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 11, color: AppColors.secondaryText, fontWeight: FontWeight.w500)),
-                Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                Text(note, style: const TextStyle(fontSize: 12, color: AppColors.secondaryText)),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: onTap,
-            style: TextButton.styleFrom(foregroundColor: AppColors.primaryAccent),
-            child: Text(actionLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  IconData _iconForAction(String label) {
+    if (label.contains('Карт')) return Icons.map_outlined;
+    if (label.contains('Позвонить')) return Icons.phone_outlined;
+    if (label.contains('Написать')) return Icons.email_outlined;
+    return Icons.arrow_forward_ios;
+  }
 }
+
 
 Widget _workRow(String day, String time) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
