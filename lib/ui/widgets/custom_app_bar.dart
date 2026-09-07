@@ -48,14 +48,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(Icons.phone, color: Colors.white),
           onPressed: () async {
-            final Uri url = Uri(scheme: 'tel', path: '+78000000000');
-            if (await canLaunchUrl(url)) {
+            final Uri url = Uri(scheme: 'tel', path: '+79180072333');
+            try {
               await launchUrl(url);
-            } else {
+            } catch (_) {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Не удалось открыть набор номера')),
+                  const SnackBar(content: Text('Не удалось открыть набор номера')),
                 );
               }
             }

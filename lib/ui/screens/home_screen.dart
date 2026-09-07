@@ -558,7 +558,7 @@ class _NewsSection extends StatelessWidget {
               ),
             ),
             SizedBox(
-              height: 280,
+              height: 310,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -599,16 +599,16 @@ class _NewsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Фото
+            // Фото — AspectRatio 16:9, без обрезки по бокам
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: SizedBox(
-                height: 140,
-                width: double.infinity,
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
                 child: item.image.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: item.image,
                         fit: BoxFit.cover,
+                        alignment: Alignment.centerLeft,
                         errorWidget: (_, __, ___) => Container(
                           color: const Color(0xFFF0F0F0),
                           child: const Center(child: Icon(Icons.article_outlined, size: 48, color: Color(0xFFCCCCCC))),

@@ -38,14 +38,18 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   void switchToTab(int index) {
-    // Если уже на Каталоге (index 2) и тапаем снова — сброс на главный раздел
-    if (index == 2 && _currentIndex == 2) {
-      context.read<ProductProvider>().clearCategory();
-      // Также попаем до корня в навигаторе каталога
-      final navState = MainScreen.tabNavigatorKeys[2].currentState;
-      if (navState != null && navState.canPop()) navState.popUntil((r) => r.isFirst);
+    final navState = MainScreen.tabNavigatorKeys[index].currentState;
+
+    if (index == _currentIndex) {
+      // Уже на этом табе — поп до корня (закрывает инфо-экраны из бургер-меню)
+      if (navState != null && navState.canPop()) {
+        navState.popUntil((r) => r.isFirst);
+      }
+      if (index == 2) context.read<ProductProvider>().clearCategory();
       return;
     }
+
+    // Переключение на другой таб
     MainScreen.currentTabIndex = index;
     setState(() => _currentIndex = index);
   }
@@ -65,10 +69,17 @@ class _MainScreenState extends State<MainScreen> {
       CartScreen(),
       ProfileScreen(),
     ];
-    return Navigator(
-      key: MainScreen.tabNavigatorKeys[index],
-      onGenerateRoute: (_) => MaterialPageRoute(
-        builder: (_) => screens[index],
+    // removePadding(removeTop: true) — внешний Scaffold уже сдвинул body ниже
+    // статус-бара. Без этого внутренний Scaffold добавляет отступ повторно,
+    // создавая серую полоску между статус-баром и AppBar.
+    return MediaQuery.removePadding(
+      context: context,
+      removeTop: true,
+      child: Navigator(
+        key: MainScreen.tabNavigatorKeys[index],
+        onGenerateRoute: (_) => MaterialPageRoute(
+          builder: (_) => screens[index],
+        ),
       ),
     );
   }
