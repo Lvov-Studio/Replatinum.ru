@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
+import '../screens/main_screen.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomAppBar({super.key});
@@ -10,18 +11,25 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: AppColors.darkAccent,
       centerTitle: true,
-      leading: Builder(
-        builder: (ctx) => IconButton(
-          padding: const EdgeInsets.all(8),
-          icon: Container(
-            width: 38, height: 38,
+      leadingWidth: 60,
+      leading: Padding(
+        // Отступ от левого края экрана
+        padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
+        child: GestureDetector(
+          onTap: () => MainScreen.scaffoldKey.currentState?.openDrawer(),
+          child: Container(
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
+            child: const Icon(
+              Icons.menu_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
-          onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
       ),
       title: RichText(
@@ -30,7 +38,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
           children: [
             TextSpan(text: 're', style: TextStyle(color: Colors.white)),
-            TextSpan(text: 'platinum',
+            TextSpan(
+                text: 'platinum',
                 style: TextStyle(color: AppColors.primaryAccent)),
           ],
         ),

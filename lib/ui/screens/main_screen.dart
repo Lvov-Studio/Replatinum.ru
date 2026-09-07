@@ -14,6 +14,9 @@ import '../widgets/burger_menu.dart';
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
+  // GlobalKey для открытия drawer из CustomAppBar
+  static final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 
@@ -27,6 +30,11 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   void switchToTab(int index) {
+    // Если уже на Каталоге (index 2) и тапаем снова — сброс на главный раздел
+    if (index == 2 && _currentIndex == 2) {
+      context.read<ProductProvider>().clearCategory();
+      return;
+    }
     setState(() => _currentIndex = index);
   }
 
@@ -53,6 +61,7 @@ class _MainScreenState extends State<MainScreen> {
     ));
 
     return Scaffold(
+      key: MainScreen.scaffoldKey,
       drawer: const BurgerMenu(),
       body: IndexedStack(
         index: _currentIndex,
