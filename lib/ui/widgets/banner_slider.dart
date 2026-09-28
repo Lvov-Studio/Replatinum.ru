@@ -55,7 +55,7 @@ class _BannerSliderState extends State<BannerSlider> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
-            height: 168,
+            height: 148,
             child: Center(child: CircularProgressIndicator()),
           );
         }
@@ -71,7 +71,7 @@ class _BannerSliderState extends State<BannerSlider> {
             CarouselSlider.builder(
               itemCount: banners.length,
               options: CarouselOptions(
-                height: 168,
+                height: 148,
                 viewportFraction: 1,
                 autoPlay: banners.length > 1,
                 autoPlayInterval: const Duration(seconds: 5),
@@ -86,7 +86,7 @@ class _BannerSliderState extends State<BannerSlider> {
                 final imageUrl = banner.displayImage;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Material(
                     color: AppColors.darkAccent,
                     borderRadius: BorderRadius.circular(16),
@@ -240,7 +240,7 @@ class _BannerFailure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: SizedBox(
         height: 144,
         child: Center(

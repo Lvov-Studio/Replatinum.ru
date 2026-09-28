@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,7 +9,6 @@ import '../../data/api/api_service.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/news_model.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
 import '../../core/utils/price_formatter.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/banner_slider.dart';
@@ -31,6 +31,19 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Product>> _hitFuture;
   late Future<List<NewsItem>> _newsFuture;
   int _bannerVersion = 0;
+  bool _showHeader = true;
+
+  bool _handleScroll(UserScrollNotification notification) {
+    final showHeader = switch (notification.direction) {
+      ScrollDirection.reverse => false,
+      ScrollDirection.forward => true,
+      ScrollDirection.idle => _showHeader,
+    };
+    if (showHeader != _showHeader) {
+      setState(() => _showHeader = showHeader);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -99,102 +112,115 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(),
+      appBar: CustomAppBar(collapsed: !_showHeader),
       backgroundColor: AppColors.background,
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Строка поиска ─────────────────────────────
-              Container(
-                color: AppColors.darkAccent,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: GestureDetector(
-                  onTap: () => showSearch(
-                    context: context,
-                    delegate: ProductSearchDelegate(),
-                  ),
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          child: Text('Поиск по каталогу...',
-                              style: TextStyle(
-                                  color: AppColors.secondaryText,
-                                  fontSize: 16)),
-                        ),
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryAccent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.search, color: Colors.white),
-                        ),
-                      ],
-                    ),
+      body: Column(
+        children: [
+          _buildSearchBar(),
+          Expanded(
+            child: NotificationListener<UserScrollNotification>(
+              onNotification: _handleScroll,
+              child: RefreshIndicator(
+                onRefresh: _refresh,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Слайдер ───────────────────────────────────
+                      const SizedBox(height: 12),
+                      BannerSlider(key: ValueKey(_bannerVersion)),
+
+                      // ── Категории ─────────────────────────────────
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(10, 20, 10, 12),
+                        child: Text('Популярные категории',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.mainText)),
+                      ),
+                      const _CategoriesRow(),
+
+                      const SizedBox(height: 2),
+
+                      // ── Акции ─────────────────────────────────────
+                      _SectionBlock(
+                        title: 'Акции',
+                        badge: 'АКЦИЯ',
+                        badgeColor: const Color(0xFFE53935),
+                        future: _saleFuture,
+                        onRetry: () => _retryProducts('sale'),
+                      ),
+
+                      // ── Новинки ───────────────────────────────────
+                      _SectionBlock(
+                        title: 'Новинки',
+                        badge: 'НОВИНКА',
+                        badgeColor: const Color(0xFFFF9800),
+                        future: _newFuture,
+                        onRetry: () => _retryProducts('new'),
+                      ),
+
+                      // ── Хиты продаж ───────────────────────────────
+                      _SectionBlock(
+                        title: 'Хиты продаж',
+                        badge: 'ХИТ ПРОДАЖ',
+                        badgeColor: AppColors.primaryAccent,
+                        future: _hitFuture,
+                        onRetry: () => _retryProducts('hit'),
+                      ),
+
+                      // ── Новости и обзоры ──────────────────────────
+                      _NewsSection(future: _newsFuture, onRetry: _retryNews),
+
+                      const SizedBox(height: 24),
+                    ],
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // ── Слайдер ───────────────────────────────────
-              const SizedBox(height: 12),
-              BannerSlider(key: ValueKey(_bannerVersion)),
-
-              // ── Категории ─────────────────────────────────
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
-                child: Text('Популярные категории',
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.mainText)),
+  Widget _buildSearchBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      child: GestureDetector(
+        onTap: () => showSearch(
+          context: context,
+          delegate: ProductSearchDelegate(),
+        ),
+        child: Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F5F7),
+            border: Border.all(color: const Color(0xFFE8E8E8), width: 1.5),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Поиск товаров...',
+                    style: TextStyle(color: Color(0xFF999999), fontSize: 14)),
               ),
-              const _CategoriesRow(),
-
-              const SizedBox(height: 8),
-
-              // ── Акции ─────────────────────────────────────
-              _SectionBlock(
-                title: 'Акции',
-                badge: 'АКЦИЯ',
-                badgeColor: const Color(0xFFE53935),
-                future: _saleFuture,
-                onRetry: () => _retryProducts('sale'),
+              Container(
+                width: 42,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryAccent,
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(8),
+                    bottomRight: Radius.circular(8),
+                  ),
+                ),
+                child: const Icon(Icons.search, color: Colors.white, size: 20),
               ),
-
-              // ── Новинки ───────────────────────────────────
-              _SectionBlock(
-                title: 'Новинки',
-                badge: 'НОВИНКА',
-                badgeColor: const Color(0xFFFF9800),
-                future: _newFuture,
-                onRetry: () => _retryProducts('new'),
-              ),
-
-              // ── Хиты продаж ───────────────────────────────
-              _SectionBlock(
-                title: 'Хиты продаж',
-                badge: 'ХИТ ПРОДАЖ',
-                badgeColor: AppColors.primaryAccent,
-                future: _hitFuture,
-                onRetry: () => _retryProducts('hit'),
-              ),
-
-              // ── Новости и обзоры ──────────────────────────
-              _NewsSection(future: _newsFuture, onRetry: _retryNews),
-
-              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -210,7 +236,7 @@ class _CategoriesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 126,
+      height: 118,
       child: Consumer<CategoryProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading) {
@@ -226,7 +252,7 @@ class _CategoriesRow extends StatelessWidget {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             scrollDirection: Axis.horizontal,
             itemCount: provider.categories.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
@@ -292,7 +318,7 @@ class _SectionHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      padding: const EdgeInsets.fromLTRB(10, 16, 10, 12),
       child: Text(title, style: Theme.of(context).textTheme.titleLarge),
     );
   }
@@ -307,7 +333,7 @@ class _HomeLoadMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
           Expanded(child: Text(message)),
@@ -405,7 +431,7 @@ class _SectionBlockState extends State<_SectionBlock> {
             children: [
               _SectionHeading(widget.title),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Text('Пока нет товаров'),
               ),
             ],
@@ -420,9 +446,9 @@ class _SectionBlockState extends State<_SectionBlock> {
         }
 
         final screenW = MediaQuery.of(context).size.width;
-        final cardWidth = (screenW - 44) / 2;
-        final imageHeight = cardWidth < 190 ? cardWidth * 0.9 : 170.0;
-        final cardH = imageHeight + 184;
+        final cardWidth = (screenW - 30) / 2;
+        final imageHeight = cardWidth < 190 ? cardWidth * 0.85 : 170.0;
+        final cardH = imageHeight + 154;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,7 +462,7 @@ class _SectionBlockState extends State<_SectionBlock> {
                 itemBuilder: (_, pageIndex) {
                   final pair = pages[pageIndex];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -457,7 +483,7 @@ class _SectionBlockState extends State<_SectionBlock> {
                                 badgeColor: widget.badgeColor,
                                 imageHeight: imageHeight),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _ProductCard(
                                 product: pair[1],
@@ -568,11 +594,11 @@ class _ProductCard extends StatelessWidget {
                   ),
                   // Бейдж
                   Positioned(
-                    top: 8,
-                    left: 8,
+                    top: 6,
+                    left: 6,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 3),
+                          horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
                         color: badgeColor,
                         borderRadius: BorderRadius.circular(4),
@@ -581,9 +607,9 @@ class _ProductCard extends StatelessWidget {
                         badge,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.3,
+                          letterSpacing: 0.1,
                         ),
                       ),
                     ),
@@ -594,7 +620,7 @@ class _ProductCard extends StatelessWidget {
             // Инфо
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -620,10 +646,10 @@ class _ProductCard extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
-                      height: AppSpacing.minTapTarget,
+                      height: 36,
                       child: ElevatedButton(
                         onPressed: () {
                           context.read<CartProvider>().addItem(product);
@@ -642,7 +668,7 @@ class _ProductCard extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(7)),
                         ),
                         child: const Text('В корзину',
                             style: TextStyle(
@@ -702,7 +728,7 @@ class _NewsSection extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 4, 4),
+              padding: const EdgeInsets.fromLTRB(10, 8, 4, 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -727,12 +753,12 @@ class _NewsSection extends StatelessWidget {
               ),
             ),
             SizedBox(
-              height: 310,
+              height: MediaQuery.sizeOf(context).width * 0.72 / 2.1 + 110,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 itemCount: news.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (_, i) => _NewsCard(item: news[i]),
               ),
             ),
@@ -759,7 +785,7 @@ class _NewsCard extends StatelessWidget {
         }
       },
       child: Container(
-        width: (MediaQuery.of(context).size.width - 48) / 2,
+        width: MediaQuery.sizeOf(context).width * 0.72,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -773,12 +799,12 @@ class _NewsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Фото — AspectRatio 16:9, без обрезки по бокам
+            // Широкое превью, как в мобильной ленте сайта.
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
               child: AspectRatio(
-                aspectRatio: 16 / 9,
+                aspectRatio: 2.1,
                 child: item.image.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: item.image,
@@ -799,45 +825,49 @@ class _NewsCard extends StatelessWidget {
                       ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Категория
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryAccent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(4),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Категория
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        item.category.toUpperCase(),
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryAccent,
+                            letterSpacing: 0.5),
+                      ),
                     ),
-                    child: Text(
-                      item.category.toUpperCase(),
-                      style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryAccent,
-                          letterSpacing: 0.5),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // Заголовок
-                  Text(item.title,
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 8),
-                  // Читать
-                  Text('Читать',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryAccent)),
-                ],
+                    const SizedBox(height: 4),
+                    // Заголовок
+                    Text(item.title,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            height: 1.25),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis),
+                    const Spacer(),
+                    const Divider(height: 1),
+                    const SizedBox(height: 6),
+                    // Читать
+                    Text('Читать',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryAccent)),
+                  ],
+                ),
               ),
             ),
           ],

@@ -129,7 +129,7 @@ class _MainScreenState extends State<MainScreen> {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 62,
+          height: 48,
           child: Row(
             children: [
               // 0 — Главная
@@ -221,37 +221,33 @@ class _TabItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Активная точка
-            if (isActive)
-              Container(
-                width: 4,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 4),
-                decoration: BoxDecoration(
-                  color: activeColor,
-                  shape: BoxShape.circle,
-                ),
-              )
-            else
-              const SizedBox(height: 8),
-            Icon(
-              isActive ? activeIcon : icon,
-              color: isActive ? activeColor : inactiveColor,
-              size: 22,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+          decoration: BoxDecoration(
+            color: isActive
+                ? activeColor.withValues(alpha: 0.11)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
                 color: isActive ? activeColor : inactiveColor,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                size: 20,
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? activeColor : inactiveColor,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -281,72 +277,69 @@ class _CartTabItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isActive)
-              Container(
-                width: 4,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 4),
-                decoration: BoxDecoration(
-                  color: activeColor,
-                  shape: BoxShape.circle,
-                ),
-              )
-            else
-              const SizedBox(height: 8),
-            Consumer<CartProvider>(
-              builder: (context, cart, _) {
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(
-                      isActive
-                          ? Icons.shopping_bag
-                          : Icons.shopping_bag_outlined,
-                      color: isActive ? activeColor : inactiveColor,
-                      size: 22,
-                    ),
-                    if (cart.itemCount > 0)
-                      Positioned(
-                        right: -6,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: activeColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: const Color(0xFF1E1E26), width: 1.5),
-                          ),
-                          constraints:
-                              const BoxConstraints(minWidth: 16, minHeight: 16),
-                          child: Text(
-                            '${cart.itemCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+          decoration: BoxDecoration(
+            color: isActive
+                ? activeColor.withValues(alpha: 0.11)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Consumer<CartProvider>(
+                builder: (context, cart, _) {
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        isActive
+                            ? Icons.shopping_bag
+                            : Icons.shopping_bag_outlined,
+                        color: isActive ? activeColor : inactiveColor,
+                        size: 20,
+                      ),
+                      if (cart.itemCount > 0)
+                        Positioned(
+                          right: -6,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: activeColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: const Color(0xFF1E1E26), width: 1.5),
                             ),
-                            textAlign: TextAlign.center,
+                            constraints: const BoxConstraints(
+                                minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '${cart.itemCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 3),
-            Text(
-              'Корзина',
-              style: TextStyle(
-                color: isActive ? activeColor : inactiveColor,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                    ],
+                  );
+                },
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                'Корзина',
+                style: TextStyle(
+                  color: isActive ? activeColor : inactiveColor,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
