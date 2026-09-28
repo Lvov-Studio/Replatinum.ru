@@ -4,7 +4,7 @@ import '../data/models/category_model.dart';
 
 class CategoryProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
-  
+
   List<Category> _categories = [];
   bool _isLoading = false;
   String _error = '';
@@ -13,7 +13,8 @@ class CategoryProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get error => _error;
 
-  Future<void> fetchCategories() async {
+  Future<void> fetchCategories({bool force = false}) async {
+    if (_isLoading || (!force && _categories.isNotEmpty)) return;
     _isLoading = true;
     _error = '';
     notifyListeners();

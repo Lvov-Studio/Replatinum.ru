@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/theme/app_colors.dart';
 import '../../data/api/api_service.dart';
 import '../../data/models/banner_model.dart';
-import '../../core/theme/app_colors.dart';
 
 class BannerSlider extends StatefulWidget {
   const BannerSlider({super.key});
@@ -14,14 +16,36 @@ class BannerSlider extends StatefulWidget {
 
 class _BannerSliderState extends State<BannerSlider> {
   final ApiService _apiService = ApiService();
-  // Кешируем Future — без этого FutureBuilder перезапускал запрос при каждом setState
-  late final Future<List<BannerModel>> _bannersFuture;
+  late Future<List<BannerModel>> _bannersFuture;
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _bannersFuture = _apiService.getBanners();
+  }
+
+  void _retry() {
+    setState(() {
+      _currentIndex = 0;
+      _bannersFuture = _apiService.getBanners();
+    });
+  }
+
+  Future<void> _openBanner(BannerModel banner) async {
+    if (banner.link.isEmpty) return;
+    final uri = Uri.tryParse('https://replatinum.ru')?.resolve(banner.link);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        !const {'replatinum.ru', 'www.replatinum.ru'}.contains(uri.host)) {
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось открыть страницу товара')),
+      );
+    }
   }
 
   @override
@@ -31,164 +55,204 @@ class _BannerSliderState extends State<BannerSlider> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
-            height: 180,
+            height: 168,
             child: Center(child: CircularProgressIndicator()),
           );
         }
-
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox.shrink();
+        if (snapshot.hasError) {
+          return _BannerFailure(onRetry: _retry);
         }
 
-        final banners = snapshot.data!;
+        final banners = snapshot.data ?? const <BannerModel>[];
+        if (banners.isEmpty) return const SizedBox.shrink();
 
         return Column(
           children: [
-            CarouselSlider(
+            CarouselSlider.builder(
+              itemCount: banners.length,
               options: CarouselOptions(
-                height: 190.0,
-                autoPlay: true,
-                autoPlayInterval: const Duration(seconds: 4),
-                autoPlayAnimationDuration: const Duration(milliseconds: 600),
-                autoPlayCurve: Curves.easeInOut,
-                enlargeCenterPage: false,   // Убрали — вызывало обрезку соседних слайдов
-                viewportFraction: 1.0,       // Каждый баннер занимает полную ширину
-                onPageChanged: (index, reason) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
+                height: 168,
+                viewportFraction: 1,
+                autoPlay: banners.length > 1,
+                autoPlayInterval: const Duration(seconds: 5),
+                autoPlayAnimationDuration: const Duration(milliseconds: 450),
+                onPageChanged: (index, _) {
+                  setState(() => _currentIndex = index);
                 },
               ),
-              items: banners.map((banner) {
-                return Builder(
-                  builder: (BuildContext context) {
-                    return Container(
-                      width: MediaQuery.of(context).size.width,
-                      margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1F1F1F),
-                        borderRadius: BorderRadius.circular(16),
-                        image: banner.bgImage.isNotEmpty
-                            ? DecorationImage(
-                                image: CachedNetworkImageProvider(banner.bgImage),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      clipBehavior: Clip.antiAlias,
+              itemBuilder: (context, index, _) {
+                final banner = banners[index];
+                // The website uses MOBILE_IMAGE first, then PREVIEW_PICTURE.
+                final imageUrl = banner.displayImage;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Material(
+                    color: AppColors.darkAccent,
+                    borderRadius: BorderRadius.circular(16),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: banner.link.isEmpty
+                          ? null
+                          : () => _openBanner(banner),
                       child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          // Картинка товара справа
-                          if (banner.image.isNotEmpty)
-                            Positioned(
-                              right: -10,
-                              bottom: -10,
-                              top: 10,
-                              child: CachedNetworkImage(
-                                imageUrl: banner.image,
-                                fit: BoxFit.contain,
-                                errorWidget: (context, url, error) => const SizedBox.shrink(),
+                          if (imageUrl.isNotEmpty)
+                            CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              alignment: Alignment.centerRight,
+                              errorWidget: (_, __, ___) =>
+                                  const ColoredBox(color: AppColors.darkAccent),
+                            ),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xF01A1A22),
+                                  Color(0xB81A1A22),
+                                  Color(0x001A1A22),
+                                ],
+                                stops: [0, 0.55, 1],
                               ),
                             ),
-
-                          // Контент слева
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (banner.badge.isNotEmpty)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryAccent,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      banner.badge,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                          ),
+                          LayoutBuilder(
+                            builder: (context, constraints) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 12),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: SizedBox(
+                                  width: constraints.maxWidth * 0.60,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (banner.badge.isNotEmpty) ...[
+                                        Text(
+                                          banner.badge.toUpperCase(),
+                                          style: const TextStyle(
+                                            color: AppColors.primaryAccent,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                      ],
+                                      Text(
+                                        banner.title,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700,
+                                          height: 1.15,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
+                                      if (banner.link.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryAccent,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 14),
+                                            child: SizedBox(
+                                              height: 38,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text('Купить',
+                                                      style: TextStyle(
+                                                        color:
+                                                            AppColors.onPrimary,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      )),
+                                                  SizedBox(width: 4),
+                                                  Icon(Icons.arrow_forward,
+                                                      size: 14,
+                                                      color:
+                                                          AppColors.onPrimary),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                if (banner.badge.isNotEmpty) const SizedBox(height: 8),
-
-                                Text(
-                                  banner.title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 4),
-
-                                if (banner.subtitle.isNotEmpty)
-                                  Text(
-                                    banner.subtitle,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-
-                                const Spacer(),
-
-                                ElevatedButton(
-                                  onPressed: () {
-                                    // Переход по ссылке banner.link
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primaryAccent,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: const Text('Купить', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 8),
-            // Индикаторы
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: banners.asMap().entries.map((entry) {
-                final isActive = _currentIndex == entry.key;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: isActive ? 20.0 : 8.0,
-                  height: 8.0,
-                  margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 3.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: isActive
-                        ? AppColors.primaryAccent
-                        : AppColors.secondaryText.withValues(alpha: 0.3),
+                    ),
                   ),
                 );
-              }).toList(),
+              },
             ),
+            if (banners.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(banners.length, (index) {
+                    final selected = index == _currentIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: selected ? 20 : 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? AppColors.primaryAccent
+                            : AppColors.border,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    );
+                  }),
+                ),
+              ),
           ],
         );
       },
+    );
+  }
+}
+
+class _BannerFailure extends StatelessWidget {
+  const _BannerFailure({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 144,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Не удалось загрузить баннеры'),
+              TextButton(onPressed: onRetry, child: const Text('Повторить')),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

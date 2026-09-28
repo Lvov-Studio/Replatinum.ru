@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../screens/main_screen.dart';
@@ -10,32 +11,28 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       backgroundColor: AppColors.darkAccent,
+      foregroundColor: Colors.white,
+      systemOverlayStyle: SystemUiOverlayStyle.light,
       centerTitle: true,
       leadingWidth: 60,
       leading: Padding(
         // Отступ от левого края экрана
         padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
-        child: GestureDetector(
-          onTap: () => MainScreen.scaffoldKey.currentState?.openDrawer(),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+        child: IconButton(
+          tooltip: 'Открыть меню',
+          onPressed: () => MainScreen.scaffoldKey.currentState?.openDrawer(),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: 0.15),
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.menu_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
           ),
+          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
         ),
       ),
       title: RichText(
         text: const TextSpan(
-          style: TextStyle(
-              fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           children: [
             TextSpan(text: 're', style: TextStyle(color: Colors.white)),
             TextSpan(
@@ -54,7 +51,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             } catch (_) {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Не удалось открыть набор номера')),
+                  const SnackBar(
+                      content: Text('Не удалось открыть набор номера')),
                 );
               }
             }

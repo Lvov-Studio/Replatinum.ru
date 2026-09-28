@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../data/api/api_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../core/theme/app_colors.dart';
-import 'success_screen.dart';
 
 class CheckoutBottomSheet extends StatefulWidget {
   const CheckoutBottomSheet({super.key});
@@ -17,7 +16,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  
+
   bool _isLoading = false;
   String _errorMessage = '';
 
@@ -43,7 +42,8 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     // Формируем JSON товаров
     final items = cartProvider.items.values.map((item) {
       return {
-        'id': int.tryParse(item.product.id) ?? 0,
+        // Для товара с торговым предложением Bitrix ожидает ID оффера.
+        'id': int.tryParse(item.catalogId) ?? 0,
         'quantity': item.quantity,
       };
     }).toList();
@@ -57,17 +57,8 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
       );
 
       if (success && mounted) {
-        // Успех! Очищаем корзину
         cartProvider.clear();
-        
-        // Закрываем BottomSheet
-        Navigator.pop(context);
-        
-        // Открываем экран успеха
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SuccessScreen()),
-        );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -88,7 +79,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   Widget build(BuildContext context) {
     // Делаем Padding с учетом клавиатуры
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    
+
     return Container(
       padding: EdgeInsets.only(
         left: 24,
@@ -115,7 +106,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              
               if (_errorMessage.isNotEmpty) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -130,34 +120,30 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                 ),
                 const SizedBox(height: 16),
               ],
-
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Ваше имя',
-                  border: OutlineInputBorder(),
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Введите имя' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Введите имя' : null,
               ),
               const SizedBox(height: 16),
-              
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
                   labelText: 'Телефон',
-                  border: OutlineInputBorder(),
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Введите телефон' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Введите телефон' : null,
               ),
               const SizedBox(height: 16),
-              
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                   labelText: 'Email',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Введите email';
@@ -166,7 +152,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                 },
               ),
               const SizedBox(height: 24),
-              
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
@@ -176,11 +161,12 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                           height: 24,
                           width: 24,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: AppColors.onPrimary,
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text('Подтвердить заказ', style: TextStyle(fontSize: 18)),
+                      : const Text('Подтвердить заказ',
+                          style: TextStyle(fontSize: 18)),
                 ),
               ),
             ],

@@ -7,6 +7,8 @@ import '../../data/models/product_model.dart';
 import '../../data/models/product_detail_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/price_formatter.dart';
+import 'main_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product productPreview;
@@ -37,14 +39,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     super.dispose();
   }
 
-  String _fmt(num price) {
-    final s = price.toInt().toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('\u00A0');
-      buf.write(s[i]);
+  void _openCart() {
+    final mainScreen = MainScreen.of(context);
+    Navigator.of(context).pop();
+    mainScreen?.switchToTab(3);
+  }
+
+  void _selectOfferByProperty(
+    ProductDetail detail,
+    String propertyName,
+    String value,
+  ) {
+    final desiredValues = <String, String>{
+      for (final property in _selectedOffer?.properties ?? <OfferProperty>[])
+        property.name: property.value,
+      propertyName: value,
+    };
+
+    Offer? found;
+    for (final offer in detail.offers) {
+      final matchesAll = desiredValues.entries.every(
+        (entry) => offer.properties.any(
+          (property) =>
+              property.name == entry.key && property.value == entry.value,
+        ),
+      );
+      if (matchesAll) {
+        found = offer;
+        break;
+      }
     }
-    return '${buf.toString()} ₽';
+
+    found ??= detail.offers.cast<Offer?>().firstWhere(
+          (offer) => offer!.properties.any(
+            (property) =>
+                property.name == propertyName && property.value == value,
+          ),
+          orElse: () => _selectedOffer,
+        );
+
+    if (found == null) return;
+    setState(() {
+      _selectedOffer = found;
+      _currentImageIndex = 0;
+    });
   }
 
   @override
@@ -67,18 +105,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.shopping_bag_outlined),
-                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Открыть корзину',
+                  onPressed: _openCart,
                 ),
                 if (cart.itemCount > 0)
                   Positioned(
-                    right: 8, top: 8,
+                    right: 8,
+                    top: 8,
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: const BoxDecoration(
-                          color: AppColors.primaryAccent, shape: BoxShape.circle),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          color: AppColors.primaryAccent,
+                          shape: BoxShape.circle),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text('${cart.itemCount}',
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center),
                     ),
                   ),
@@ -92,29 +137,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-                child: CircularProgressIndicator(color: AppColors.primaryAccent));
+                child:
+                    CircularProgressIndicator(color: AppColors.primaryAccent));
           }
           if (snapshot.hasError) {
             return Center(
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Icon(Icons.wifi_off, size: 64, color: AppColors.secondaryText),
-                const SizedBox(height: 12),
-                const Text('Не удалось загрузить товар'),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () => setState(() {
-                    _detailFuture =
-                        _apiService.getProductDetail(widget.productPreview.id);
-                  }),
-                  child: const Text('Повторить'),
-                ),
-              ]),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi_off,
+                        size: 64, color: AppColors.secondaryText),
+                    const SizedBox(height: 12),
+                    const Text('Не удалось загрузить товар'),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () => setState(() {
+                        _detailFuture = _apiService
+                            .getProductDetail(widget.productPreview.id);
+                      }),
+                      child: const Text('Повторить'),
+                    ),
+                  ]),
             );
           }
           if (!snapshot.hasData) return const Center(child: Text('Нет данных'));
 
           final detail = snapshot.data!;
-          _selectedOffer ??= detail.offers.isNotEmpty ? detail.offers.first : null;
+          _selectedOffer ??=
+              detail.offers.isNotEmpty ? detail.offers.first : null;
 
           return _buildContent(detail);
         },
@@ -126,17 +176,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 54),
               backgroundColor: AppColors.primaryAccent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              foregroundColor: AppColors.onPrimary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
-              context.read<CartProvider>().addItem(widget.productPreview);
+              context.read<CartProvider>().addItem(
+                    widget.productPreview,
+                    offer: _selectedOffer,
+                  );
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: const Text('Добавлено в корзину'),
+                content: const Text(
+                  'Добавлено в корзину',
+                  style: TextStyle(color: AppColors.onPrimary),
+                ),
                 duration: const Duration(seconds: 1),
                 backgroundColor: AppColors.primaryAccent,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ));
             },
             child: const Text('Добавить в корзину',
@@ -151,10 +209,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   /// Примеры: "0hkw3xU2", "ZMTq2w28", "LM1hMNjg"
   bool _isBitrixCode(String val) {
     final v = val.trim();
-    if (v.isEmpty || v.contains(' ') || v.length < 5 || v.length > 16) return false;
+    if (v.isEmpty || v.contains(' ') || v.length < 5 || v.length > 16) {
+      return false;
+    }
     // Должен содержать смесь верхнего и нижнего регистра (или цифры + буквы)
-    final hasUpper  = v.contains(RegExp(r'[A-Z]'));
-    final hasLower  = v.contains(RegExp(r'[a-z]'));
+    final hasUpper = v.contains(RegExp(r'[A-Z]'));
+    final hasLower = v.contains(RegExp(r'[a-z]'));
     final hasCyrillic = v.contains(RegExp(r'[а-яА-ЯёЁ]'));
     // Кириллица — нормальное значение (не код)
     if (hasCyrillic) return false;
@@ -165,7 +225,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _buildContent(ProductDetail detail) {
     // Фото: если выбран оффер с фото — показываем его, иначе галерея товара
     final offerImg = _selectedOffer?.image ?? '';
-    final images = offerImg.isNotEmpty ? [offerImg, ...detail.images] : detail.images;
+    final images =
+        offerImg.isNotEmpty ? [offerImg, ...detail.images] : detail.images;
     final price = _selectedOffer != null && _selectedOffer!.price > 0
         ? _selectedOffer!.price
         : detail.price;
@@ -192,7 +253,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         if (nameLower.contains('галерея') ||
             nameLower.contains('gallery') ||
             nameLower.contains('фото') ||
-            nameLower.contains('photo')) { return; }
+            nameLower.contains('photo')) {
+          return;
+        }
 
         // ❌ Пропускаем если значения — массивы файловых ID Bitrix: "[123, 456, ...]"
         if (valList.every((v) => v.trim().startsWith('['))) return;
@@ -234,20 +297,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       if (images.length > 1)
                         Positioned(
-                          bottom: 12, left: 0, right: 0,
+                          bottom: 12,
+                          left: 0,
+                          right: 0,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(images.length, (i) => Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              width: _currentImageIndex == i ? 20 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: _currentImageIndex == i
-                                    ? AppColors.primaryAccent
-                                    : const Color(0xFFDDDDDD),
-                              ),
-                            )),
+                            children: List.generate(
+                                images.length,
+                                (i) => Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 3),
+                                      width: _currentImageIndex == i ? 20 : 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(4),
+                                        color: _currentImageIndex == i
+                                            ? AppColors.primaryAccent
+                                            : const Color(0xFFDDDDDD),
+                                      ),
+                                    )),
                           ),
                         ),
                     ],
@@ -266,10 +334,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 Text(detail.name,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700, height: 1.3)),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3)),
                 const SizedBox(height: 10),
                 Text(
-                  price > 0 ? _fmt(price) : 'По запросу',
+                  price > 0 ? formatPrice(price) : 'По запросу',
                   style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
@@ -329,7 +399,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         imageUrl: offer.image,
                                         fit: BoxFit.cover,
                                         errorWidget: (_, __, ___) => const Icon(
-                                            Icons.image_outlined, size: 24,
+                                            Icons.image_outlined,
+                                            size: 24,
                                             color: Color(0xFFCCCCCC)),
                                       )
                                     : Container(
@@ -370,18 +441,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           children: values.map((val) {
                             final isSelected = val == currentVal;
                             return GestureDetector(
-                              onTap: () {
-                                // Найти оффер с этим значением
-                                final found = detail.offers.firstWhere(
-                                  (o) => o.properties.any(
-                                      (p) => p.name == propName && p.value == val),
-                                  orElse: () => detail.offers.first,
-                                );
-                                setState(() {
-                                  _selectedOffer = found;
-                                  _currentImageIndex = 0;
-                                });
-                              },
+                              onTap: () => _selectOfferByProperty(
+                                detail,
+                                propName,
+                                val,
+                              ),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 8),
@@ -394,7 +458,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     width: isSelected ? 2 : 1,
                                   ),
                                   color: isSelected
-                                      ? AppColors.primaryAccent.withValues(alpha: 0.08)
+                                      ? AppColors.primaryAccent
+                                          .withValues(alpha: 0.08)
                                       : Colors.white,
                                 ),
                                 child: Text(
@@ -432,8 +497,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Описание',
-                      style: TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700)),
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 10),
                   Html(
                     data: detail.description,

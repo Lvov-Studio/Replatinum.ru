@@ -3,11 +3,30 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/cart_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/price_formatter.dart';
 import '../widgets/custom_app_bar.dart';
 import 'checkout_bottom_sheet.dart';
+import 'main_screen.dart';
+import 'success_screen.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
+
+  Future<void> _checkout(BuildContext context) async {
+    final completed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const CheckoutBottomSheet(),
+    );
+    if (!context.mounted || completed != true) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SuccessScreen()),
+    );
+    if (!context.mounted) return;
+    MainScreen.of(context)?.switchToTab(0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,11 +64,12 @@ class CartScreen extends StatelessWidget {
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: cartItems.length,
-                  separatorBuilder: (context, index) => const Divider(color: AppColors.border),
+                  separatorBuilder: (context, index) =>
+                      const Divider(color: AppColors.border),
                   itemBuilder: (context, index) {
                     final cartItem = cartItems[index];
                     final product = cartItem.product;
-                    
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Row(
@@ -69,13 +89,17 @@ class CartScreen extends StatelessWidget {
                                 ? CachedNetworkImage(
                                     imageUrl: product.image,
                                     fit: BoxFit.cover,
-                                    placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                                    errorWidget: (context, url, error) => const Icon(Icons.image_not_supported, color: AppColors.secondaryText),
+                                    placeholder: (context, url) => const Center(
+                                        child: CircularProgressIndicator()),
+                                    errorWidget: (context, url, error) =>
+                                        const Icon(Icons.image_not_supported,
+                                            color: AppColors.secondaryText),
                                   )
-                                : const Icon(Icons.image, color: AppColors.secondaryText),
+                                : const Icon(Icons.image,
+                                    color: AppColors.secondaryText),
                           ),
-                          const SizedBox(width: 16),
-                          
+                          const SizedBox(width: 12),
+
                           // Название и цена
                           Expanded(
                             child: Column(
@@ -83,44 +107,67 @@ class CartScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   product.name,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontSize: 14),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                if (cartItem.variantLabel.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    cartItem.variantLabel,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
                                 const SizedBox(height: 8),
-                                Text(
-                                  '${product.price} ₽',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        color: AppColors.primaryAccent,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        formatPrice(cartItem.unitPrice),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              color: AppColors.primaryText,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Уменьшить количество',
+                                      onPressed: () => cart.decrementQuantity(
+                                        cartItem.key,
+                                      ),
+                                      icon: const Icon(
+                                          Icons.remove_circle_outline),
+                                      color: AppColors.secondaryText,
+                                    ),
+                                    Text(
+                                      '${cartItem.quantity}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Увеличить количество',
+                                      onPressed: () => cart.incrementQuantity(
+                                        cartItem.key,
+                                      ),
+                                      icon:
+                                          const Icon(Icons.add_circle_outline),
+                                      color: AppColors.primaryText,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ),
-                          
-                          // Кнопки количества
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  cart.decrementQuantity(product.id);
-                                },
-                                icon: const Icon(Icons.remove_circle_outline),
-                                color: AppColors.secondaryText,
-                              ),
-                              Text(
-                                '${cartItem.quantity}',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  cart.incrementQuantity(product.id);
-                                },
-                                icon: const Icon(Icons.add_circle_outline),
-                                color: AppColors.primaryAccent,
-                              ),
-                            ],
                           ),
                         ],
                       ),
@@ -128,7 +175,7 @@ class CartScreen extends StatelessWidget {
                   },
                 ),
               ),
-              
+
               // Итоговая сумма и кнопка
               Container(
                 padding: const EdgeInsets.all(24),
@@ -150,34 +197,29 @@ class CartScreen extends StatelessWidget {
                         children: [
                           const Text(
                             'Итого:',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                           Text(
-                            '${cart.totalAmount.toStringAsFixed(0)} ₽',
+                            formatPrice(cart.totalAmount),
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.primaryAccent,
+                              color: AppColors.primaryText,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) => const CheckoutBottomSheet(),
-                          );
-                        },
+                        onPressed: () => _checkout(context),
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 56),
                         ),
                         child: const Text(
                           'Оформить заказ',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],

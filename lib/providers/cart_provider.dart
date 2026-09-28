@@ -1,11 +1,32 @@
 import 'package:flutter/material.dart';
+import '../data/models/product_detail_model.dart';
 import '../data/models/product_model.dart';
 
 class CartItem {
   final Product product;
-  int quantity;
+  final Offer? offer;
+  final int quantity;
 
-  CartItem({required this.product, this.quantity = 1});
+  const CartItem({required this.product, this.offer, this.quantity = 1});
+
+  String get key => '${product.id}:${offer?.id ?? 'base'}';
+  String get catalogId => offer?.id ?? product.id;
+  num get unitPrice =>
+      offer != null && offer!.price > 0 ? offer!.price : product.price;
+  String get image =>
+      offer?.image.isNotEmpty == true ? offer!.image : product.image;
+  String get variantLabel =>
+      offer?.properties
+          .where((property) => property.value.trim().isNotEmpty)
+          .map((property) => property.value)
+          .join(' · ') ??
+      '';
+
+  CartItem copyWith({int? quantity}) => CartItem(
+        product: product,
+        offer: offer,
+        quantity: quantity ?? this.quantity,
+      );
 }
 
 class CartProvider extends ChangeNotifier {
@@ -24,40 +45,39 @@ class CartProvider extends ChangeNotifier {
   double get totalAmount {
     var total = 0.0;
     _items.forEach((key, item) {
-      total += item.product.price * item.quantity;
+      total += item.unitPrice * item.quantity;
     });
     return total;
   }
 
-  void addItem(Product product) {
-    if (_items.containsKey(product.id)) {
+  void addItem(Product product, {Offer? offer}) {
+    final item = CartItem(product: product, offer: offer);
+    if (_items.containsKey(item.key)) {
       _items.update(
-        product.id,
-        (existingCartItem) => CartItem(
-          product: existingCartItem.product,
+        item.key,
+        (existingCartItem) => existingCartItem.copyWith(
           quantity: existingCartItem.quantity + 1,
         ),
       );
     } else {
       _items.putIfAbsent(
-        product.id,
-        () => CartItem(product: product),
+        item.key,
+        () => item,
       );
     }
     notifyListeners();
   }
 
-  void removeItem(String productId) {
-    _items.remove(productId);
+  void removeItem(String itemKey) {
+    _items.remove(itemKey);
     notifyListeners();
   }
 
-  void incrementQuantity(String productId) {
-    if (_items.containsKey(productId)) {
+  void incrementQuantity(String itemKey) {
+    if (_items.containsKey(itemKey)) {
       _items.update(
-        productId,
-        (existingCartItem) => CartItem(
-          product: existingCartItem.product,
+        itemKey,
+        (existingCartItem) => existingCartItem.copyWith(
           quantity: existingCartItem.quantity + 1,
         ),
       );
@@ -65,19 +85,18 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  void decrementQuantity(String productId) {
-    if (!_items.containsKey(productId)) return;
-    
-    if (_items[productId]!.quantity > 1) {
+  void decrementQuantity(String itemKey) {
+    if (!_items.containsKey(itemKey)) return;
+
+    if (_items[itemKey]!.quantity > 1) {
       _items.update(
-        productId,
-        (existingCartItem) => CartItem(
-          product: existingCartItem.product,
+        itemKey,
+        (existingCartItem) => existingCartItem.copyWith(
           quantity: existingCartItem.quantity - 1,
         ),
       );
     } else {
-      _items.remove(productId);
+      _items.remove(itemKey);
     }
     notifyListeners();
   }

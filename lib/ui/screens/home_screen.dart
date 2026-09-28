@@ -8,6 +8,8 @@ import '../../data/api/api_service.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/news_model.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/utils/price_formatter.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/banner_slider.dart';
 import 'product_search_delegate.dart';
@@ -28,14 +30,17 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Product>> _newFuture;
   late Future<List<Product>> _hitFuture;
   late Future<List<NewsItem>> _newsFuture;
+  int _bannerVersion = 0;
 
   @override
   void initState() {
     super.initState();
-    context.read<CategoryProvider>().fetchCategories();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<CategoryProvider>().fetchCategories();
+    });
     _saleFuture = _loadSection('sale');
-    _newFuture  = _loadSection('new');
-    _hitFuture  = _loadSection('hit');
+    _newFuture = _loadSection('new');
+    _hitFuture = _loadSection('hit');
     _newsFuture = _api.getNews(limit: 8);
   }
 
@@ -44,99 +49,154 @@ class _HomeScreenState extends State<HomeScreen> {
     return result['products'] as List<Product>;
   }
 
+  Future<void> _ignoreFailure(Future<dynamic> future) async {
+    try {
+      await future;
+    } catch (_) {
+      // The section renders its own retry state.
+    }
+  }
+
+  Future<void> _refresh() async {
+    final categories =
+        context.read<CategoryProvider>().fetchCategories(force: true);
+    setState(() {
+      _bannerVersion++;
+      _saleFuture = _loadSection('sale');
+      _newFuture = _loadSection('new');
+      _hitFuture = _loadSection('hit');
+      _newsFuture = _api.getNews(limit: 8);
+    });
+    await Future.wait([
+      categories,
+      _ignoreFailure(_saleFuture),
+      _ignoreFailure(_newFuture),
+      _ignoreFailure(_hitFuture),
+      _ignoreFailure(_newsFuture),
+    ]);
+  }
+
+  void _retryProducts(String type) {
+    setState(() {
+      switch (type) {
+        case 'sale':
+          _saleFuture = _loadSection(type);
+          break;
+        case 'new':
+          _newFuture = _loadSection(type);
+          break;
+        case 'hit':
+          _hitFuture = _loadSection(type);
+          break;
+      }
+    });
+  }
+
+  void _retryNews() {
+    setState(() => _newsFuture = _api.getNews(limit: 8));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(),
-      backgroundColor: const Color(0xFFF2F2F7),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Строка поиска ─────────────────────────────
-            Container(
-              color: AppColors.darkAccent,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: GestureDetector(
-                onTap: () => showSearch(
-                  context: context,
-                  delegate: ProductSearchDelegate(),
-                ),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
+      backgroundColor: AppColors.background,
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Строка поиска ─────────────────────────────
+              Container(
+                color: AppColors.darkAccent,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: GestureDetector(
+                  onTap: () => showSearch(
+                    context: context,
+                    delegate: ProductSearchDelegate(),
                   ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Text('Поиск по каталогу...',
-                            style: TextStyle(
-                                color: AppColors.secondaryText, fontSize: 16)),
-                      ),
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryAccent,
-                          borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Text('Поиск по каталогу...',
+                              style: TextStyle(
+                                  color: AppColors.secondaryText,
+                                  fontSize: 16)),
                         ),
-                        child: const Icon(Icons.search, color: Colors.white),
-                      ),
-                    ],
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryAccent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.search, color: Colors.white),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // ── Слайдер ───────────────────────────────────
-            const SizedBox(height: 12),
-            const BannerSlider(),
+              // ── Слайдер ───────────────────────────────────
+              const SizedBox(height: 12),
+              BannerSlider(key: ValueKey(_bannerVersion)),
 
-            // ── Категории ─────────────────────────────────
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
-              child: Text('Популярные категории',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.mainText)),
-            ),
-            _CategoriesRow(),
+              // ── Категории ─────────────────────────────────
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
+                child: Text('Популярные категории',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.mainText)),
+              ),
+              const _CategoriesRow(),
 
-            const SizedBox(height: 8),
+              const SizedBox(height: 8),
 
-            // ── Акции ─────────────────────────────────────
-            _SectionBlock(
-              title: 'Акции',
-              badge: 'АКЦИЯ',
-              badgeColor: const Color(0xFFE53935),
-              future: _saleFuture,
-            ),
+              // ── Акции ─────────────────────────────────────
+              _SectionBlock(
+                title: 'Акции',
+                badge: 'АКЦИЯ',
+                badgeColor: const Color(0xFFE53935),
+                future: _saleFuture,
+                onRetry: () => _retryProducts('sale'),
+              ),
 
-            // ── Новинки ───────────────────────────────────
-            _SectionBlock(
-              title: 'Новинки',
-              badge: 'НОВИНКА',
-              badgeColor: const Color(0xFFFF9800),
-              future: _newFuture,
-            ),
+              // ── Новинки ───────────────────────────────────
+              _SectionBlock(
+                title: 'Новинки',
+                badge: 'НОВИНКА',
+                badgeColor: const Color(0xFFFF9800),
+                future: _newFuture,
+                onRetry: () => _retryProducts('new'),
+              ),
 
-            // ── Хиты продаж ───────────────────────────────
-            _SectionBlock(
-              title: 'Хиты продаж',
-              badge: 'ХИТ ПРОДАЖ',
-              badgeColor: AppColors.primaryAccent,
-              future: _hitFuture,
-            ),
+              // ── Хиты продаж ───────────────────────────────
+              _SectionBlock(
+                title: 'Хиты продаж',
+                badge: 'ХИТ ПРОДАЖ',
+                badgeColor: AppColors.primaryAccent,
+                future: _hitFuture,
+                onRetry: () => _retryProducts('hit'),
+              ),
 
-            // ── Новости и обзоры ──────────────────────────
-            _NewsSection(future: _newsFuture),
+              // ── Новости и обзоры ──────────────────────────
+              _NewsSection(future: _newsFuture, onRetry: _retryNews),
 
-            const SizedBox(height: 24),
-          ],
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -145,61 +205,72 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ─── Горизонтальная лента категорий ────────────────────────────────────────
 class _CategoriesRow extends StatelessWidget {
+  const _CategoriesRow();
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 110,
+      height: 126,
       child: Consumer<CategoryProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator(
-                color: AppColors.primaryAccent));
+            return const Center(
+                child:
+                    CircularProgressIndicator(color: AppColors.primaryAccent));
           }
-          if (provider.categories.isEmpty) return const SizedBox.shrink();
+          if (provider.categories.isEmpty) {
+            return _HomeLoadMessage(
+              message: 'Категории не загрузились',
+              onRetry: () => provider.fetchCategories(),
+            );
+          }
 
           return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: provider.categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final cat = provider.categories[index];
-              return GestureDetector(
-                onTap: () => MainScreen.of(context)?.switchToCatalog(category: cat),
+              return InkWell(
+                onTap: () =>
+                    MainScreen.of(context)?.switchToCatalog(category: cat),
                 child: SizedBox(
-                  width: 80,
+                  width: 84,
                   child: Column(
                     children: [
                       Container(
-                        width: 70, height: 70,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
                           color: Colors.white,
+                          shape: BoxShape.circle,
                           border: Border.all(
-                              color: AppColors.primaryAccent, width: 2),
+                              color: AppColors.primaryAccent, width: 1.5),
                         ),
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(5),
                         child: ClipOval(
                           child: cat.image.isNotEmpty
                               ? CachedNetworkImage(
                                   imageUrl: cat.image,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) =>
-                                      const Icon(Icons.category,
-                                          color: AppColors.secondaryText),
+                                  fit: BoxFit.contain,
+                                  errorWidget: (_, __, ___) => const Icon(
+                                      Icons.category,
+                                      color: AppColors.secondaryText),
                                 )
                               : const Icon(Icons.category,
                                   color: AppColors.secondaryText),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(cat.name,
                           style: const TextStyle(
                               fontSize: 11,
+                              height: 1.2,
                               fontWeight: FontWeight.w500,
                               color: AppColors.mainText),
                           textAlign: TextAlign.center,
-                          maxLines: 2,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis),
                     ],
                   ),
@@ -213,18 +284,54 @@ class _CategoriesRow extends StatelessWidget {
   }
 }
 
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+    );
+  }
+}
+
+class _HomeLoadMessage extends StatelessWidget {
+  const _HomeLoadMessage({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(child: Text(message)),
+          TextButton(onPressed: onRetry, child: const Text('Повторить')),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Секция (Акции / Новинки / Хиты продаж) — горизонтальный свайп ────────
 class _SectionBlock extends StatefulWidget {
   final String title;
   final String badge;
   final Color badgeColor;
   final Future<List<Product>> future;
+  final VoidCallback onRetry;
 
   const _SectionBlock({
     required this.title,
     required this.badge,
     required this.badgeColor,
     required this.future,
+    required this.onRetry,
   });
 
   @override
@@ -246,6 +353,17 @@ class _SectionBlockState extends State<_SectionBlock> {
   }
 
   @override
+  void didUpdateWidget(covariant _SectionBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.future, widget.future)) {
+      _currentPage = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _ctrl.hasClients) _ctrl.jumpToPage(0);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _ctrl.dispose();
     super.dispose();
@@ -257,14 +375,42 @@ class _SectionBlockState extends State<_SectionBlock> {
       future: widget.future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-                child: CircularProgressIndicator(color: AppColors.primaryAccent)),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeading(widget.title),
+              const SizedBox(
+                height: 80,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          );
+        }
+        if (snapshot.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeading(widget.title),
+              _HomeLoadMessage(
+                message: 'Товары не загрузились',
+                onRetry: widget.onRetry,
+              ),
+            ],
           );
         }
         final products = snapshot.data ?? [];
-        if (products.isEmpty) return const SizedBox.shrink();
+        if (products.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeading(widget.title),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text('Пока нет товаров'),
+              ),
+            ],
+          );
+        }
 
         // Группируем по 2 карточки на одну «страницу»
         final pages = <List<Product>>[];
@@ -274,20 +420,14 @@ class _SectionBlockState extends State<_SectionBlock> {
         }
 
         final screenW = MediaQuery.of(context).size.width;
-        final cardH = (screenW / 2 - 22) / 0.6;
+        final cardWidth = (screenW - 44) / 2;
+        final imageHeight = cardWidth < 190 ? cardWidth * 0.9 : 170.0;
+        final cardH = imageHeight + 184;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Text(widget.title,
-                  style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.mainText)),
-            ),
+            _SectionHeading(widget.title),
             SizedBox(
               height: cardH,
               child: PageView.builder(
@@ -296,25 +436,36 @@ class _SectionBlockState extends State<_SectionBlock> {
                 itemBuilder: (_, pageIndex) {
                   final pair = pages[pageIndex];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: _ProductCard(
-                              product: pair[0],
-                              badge: widget.badge,
-                              badgeColor: widget.badgeColor),
-                        ),
-                        const SizedBox(width: 10),
-                        if (pair.length > 1)
+                        if (pair.length == 1)
+                          SizedBox(
+                            width: cardWidth,
+                            child: _ProductCard(
+                                product: pair[0],
+                                badge: widget.badge,
+                                badgeColor: widget.badgeColor,
+                                imageHeight: imageHeight),
+                          )
+                        else ...[
+                          Expanded(
+                            child: _ProductCard(
+                                product: pair[0],
+                                badge: widget.badge,
+                                badgeColor: widget.badgeColor,
+                                imageHeight: imageHeight),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: _ProductCard(
                                 product: pair[1],
                                 badge: widget.badge,
-                                badgeColor: widget.badgeColor),
-                          )
-                        else
-                          const Expanded(child: SizedBox()),
+                                badgeColor: widget.badgeColor,
+                                imageHeight: imageHeight),
+                          ),
+                        ],
                       ],
                     ),
                   );
@@ -356,22 +507,14 @@ class _ProductCard extends StatelessWidget {
   final Product product;
   final String badge;
   final Color badgeColor;
+  final double imageHeight;
 
   const _ProductCard({
     required this.product,
     required this.badge,
     required this.badgeColor,
+    required this.imageHeight,
   });
-
-  String _fmt(int price) {
-    final s = price.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('\u00A0');
-      buf.write(s[i]);
-    }
-    return buf.toString();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -397,13 +540,13 @@ class _ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Фото + бейдж
-            Expanded(
-              flex: 5,
+            SizedBox(
+              height: imageHeight,
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(12)),
                     child: Container(
                       color: const Color(0xFFF8F8F8),
                       width: double.infinity,
@@ -425,7 +568,8 @@ class _ProductCard extends StatelessWidget {
                   ),
                   // Бейдж
                   Positioned(
-                    top: 8, left: 8,
+                    top: 8,
+                    left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 3),
@@ -437,7 +581,7 @@ class _ProductCard extends StatelessWidget {
                         badge,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 9,
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.3,
                         ),
@@ -449,42 +593,44 @@ class _ProductCard extends StatelessWidget {
             ),
             // Инфо
             Expanded(
-              flex: 4,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         product.name,
-                        style: const TextStyle(fontSize: 11, height: 1.35),
-                        maxLines: 3,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.25,
+                            color: AppColors.mainText),
+                        maxLines: 5,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       product.price > 0
-                          ? '${_fmt(product.price.toInt())} ₽'
+                          ? formatPrice(product.price)
                           : 'По запросу',
                       style: const TextStyle(
-                        color: AppColors.primaryAccent,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
+                        color: AppColors.primaryText,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
-                      height: 30,
+                      height: AppSpacing.minTapTarget,
                       child: ElevatedButton(
                         onPressed: () {
                           context.read<CartProvider>().addItem(product);
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: const Text('Добавлено в корзину'),
                             duration: const Duration(seconds: 1),
-                            backgroundColor: AppColors.primaryAccent,
+                            backgroundColor: AppColors.darkAccent,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
@@ -499,7 +645,8 @@ class _ProductCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8)),
                         ),
                         child: const Text('В корзину',
-                            style: TextStyle(fontSize: 11)),
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ],
@@ -516,7 +663,8 @@ class _ProductCard extends StatelessWidget {
 // ─── Секция Новости и обзоры ───────────────────────────────────────────────
 class _NewsSection extends StatelessWidget {
   final Future<List<NewsItem>> future;
-  const _NewsSection({required this.future});
+  final VoidCallback onRetry;
+  const _NewsSection({required this.future, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -524,9 +672,26 @@ class _NewsSection extends StatelessWidget {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator(color: AppColors.primaryAccent)),
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeading('Новости и обзоры'),
+              SizedBox(
+                  height: 80,
+                  child: Center(child: CircularProgressIndicator())),
+            ],
+          );
+        }
+        if (snapshot.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionHeading('Новости и обзоры'),
+              _HomeLoadMessage(
+                message: 'Новости не загрузились',
+                onRetry: onRetry,
+              ),
+            ],
           );
         }
         final news = snapshot.data ?? [];
@@ -549,10 +714,14 @@ class _NewsSection extends StatelessWidget {
                   TextButton(
                     onPressed: () async {
                       final uri = Uri.parse('https://replatinum.ru/news/');
-                      if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
+                      }
                     },
                     child: const Text('Все статьи →',
-                        style: TextStyle(color: AppColors.primaryAccent, fontSize: 13)),
+                        style: TextStyle(
+                            color: AppColors.primaryAccent, fontSize: 13)),
                   ),
                 ],
               ),
@@ -585,7 +754,9 @@ class _NewsCard extends StatelessWidget {
     return GestureDetector(
       onTap: () async {
         final uri = Uri.parse('https://replatinum.ru${item.url}');
-        if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
       },
       child: Container(
         width: (MediaQuery.of(context).size.width - 48) / 2,
@@ -593,7 +764,10 @@ class _NewsCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2)),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
@@ -601,7 +775,8 @@ class _NewsCard extends StatelessWidget {
           children: [
             // Фото — AspectRatio 16:9, без обрезки по бокам
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: item.image.isNotEmpty
@@ -611,12 +786,16 @@ class _NewsCard extends StatelessWidget {
                         alignment: Alignment.centerLeft,
                         errorWidget: (_, __, ___) => Container(
                           color: const Color(0xFFF0F0F0),
-                          child: const Center(child: Icon(Icons.article_outlined, size: 48, color: Color(0xFFCCCCCC))),
+                          child: const Center(
+                              child: Icon(Icons.article_outlined,
+                                  size: 48, color: Color(0xFFCCCCCC))),
                         ),
                       )
                     : Container(
                         color: const Color(0xFFF0F0F0),
-                        child: const Center(child: Icon(Icons.article_outlined, size: 48, color: Color(0xFFCCCCCC))),
+                        child: const Center(
+                            child: Icon(Icons.article_outlined,
+                                size: 48, color: Color(0xFFCCCCCC))),
                       ),
               ),
             ),
@@ -627,7 +806,8 @@ class _NewsCard extends StatelessWidget {
                 children: [
                   // Категория
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.primaryAccent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(4),
@@ -644,7 +824,10 @@ class _NewsCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   // Заголовок
                   Text(item.title,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3),
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 8),

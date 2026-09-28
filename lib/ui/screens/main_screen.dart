@@ -15,11 +15,13 @@ class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   // GlobalKey для открытия drawer из CustomAppBar
-  static final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+  static final GlobalKey<ScaffoldState> scaffoldKey =
+      GlobalKey<ScaffoldState>();
 
   // Вложенные навигаторы для каждого таба (нижнее меню не исчезает)
   static final tabNavigatorKeys = List.generate(
-    5, (_) => GlobalKey<NavigatorState>(),
+    5,
+    (_) => GlobalKey<NavigatorState>(),
   );
 
   // Текущий активный таб (для burger menu)
@@ -69,17 +71,10 @@ class _MainScreenState extends State<MainScreen> {
       CartScreen(),
       ProfileScreen(),
     ];
-    // removePadding(removeTop: true) — внешний Scaffold уже сдвинул body ниже
-    // статус-бара. Без этого внутренний Scaffold добавляет отступ повторно,
-    // создавая серую полоску между статус-баром и AppBar.
-    return MediaQuery.removePadding(
-      context: context,
-      removeTop: true,
-      child: Navigator(
-        key: MainScreen.tabNavigatorKeys[index],
-        onGenerateRoute: (_) => MaterialPageRoute(
-          builder: (_) => screens[index],
-        ),
+    return Navigator(
+      key: MainScreen.tabNavigatorKeys[index],
+      onGenerateRoute: (_) => MaterialPageRoute(
+        builder: (_) => screens[index],
       ),
     );
   }
@@ -97,7 +92,8 @@ class _MainScreenState extends State<MainScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        final navState = MainScreen.tabNavigatorKeys[_currentIndex].currentState;
+        final navState =
+            MainScreen.tabNavigatorKeys[_currentIndex].currentState;
         if (navState != null && navState.canPop()) {
           navState.pop();
         }
@@ -306,7 +302,9 @@ class _CartTabItem extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     Icon(
-                      isActive ? Icons.shopping_bag : Icons.shopping_bag_outlined,
+                      isActive
+                          ? Icons.shopping_bag
+                          : Icons.shopping_bag_outlined,
                       color: isActive ? activeColor : inactiveColor,
                       size: 22,
                     ),
@@ -319,9 +317,11 @@ class _CartTabItem extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: activeColor,
                             shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF1E1E26), width: 1.5),
+                            border: Border.all(
+                                color: const Color(0xFF1E1E26), width: 1.5),
                           ),
-                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          constraints:
+                              const BoxConstraints(minWidth: 16, minHeight: 16),
                           child: Text(
                             '${cart.itemCount}',
                             style: const TextStyle(

@@ -7,7 +7,7 @@ import '../models/news_model.dart';
 
 class ApiService {
   late final Dio _dio;
-  
+
   static const String baseUrl = 'https://replatinum.ru/local/api/mobile/v1/';
 
   ApiService() {
@@ -32,18 +32,17 @@ class ApiService {
         return handler.next(e);
       },
     ));
-    
-    // LogInterceptor полезен для отладки
-    _dio.interceptors.add(LogInterceptor(responseBody: true));
+
   }
 
   Future<List<Category>> getCategories() async {
     try {
       final response = await _dio.get('get_categories.php');
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = response.data;
-        if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
+        if (jsonResponse['status'] == 'success' &&
+            jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
           return data.map((json) => Category.fromJson(json)).toList();
         } else {
@@ -59,7 +58,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getProducts({
     String? categoryId,
-    String? type,        // 'sale' | 'new' | 'hit'
+    String? type, // 'sale' | 'new' | 'hit'
     int limit = 10,
     int offset = 0,
   }) async {
@@ -68,11 +67,13 @@ class ApiService {
       if (categoryId != null) params['section_id'] = categoryId;
       if (type != null) params['type'] = type;
 
-      final response = await _dio.get('get_products.php', queryParameters: params);
+      final response =
+          await _dio.get('get_products.php', queryParameters: params);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = response.data;
-        if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
+        if (jsonResponse['status'] == 'success' &&
+            jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
           return {
             'products': data.map((json) => Product.fromJson(json)).toList(),
@@ -91,11 +92,13 @@ class ApiService {
 
   Future<ProductDetail> getProductDetail(String id) async {
     try {
-      final response = await _dio.get('get_product_detail.php', queryParameters: {'id': id});
-      
+      final response =
+          await _dio.get('get_product_detail.php', queryParameters: {'id': id});
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = response.data;
-        if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
+        if (jsonResponse['status'] == 'success' &&
+            jsonResponse['data'] != null) {
           return ProductDetail.fromJson(jsonResponse['data']);
         } else {
           throw Exception('Invalid response format or status');
@@ -108,7 +111,8 @@ class ApiService {
     }
   }
 
-  Future<bool> createOrder(String name, String phone, String email, List<Map<String, dynamic>> items) async {
+  Future<bool> createOrder(String name, String phone, String email,
+      List<Map<String, dynamic>> items) async {
     try {
       final response = await _dio.post(
         'create_order.php',
@@ -137,11 +141,13 @@ class ApiService {
 
   Future<List<Product>> searchProducts(String query) async {
     try {
-      final response = await _dio.get('search.php', queryParameters: {'q': query});
-      
+      final response =
+          await _dio.get('search.php', queryParameters: {'q': query});
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = response.data;
-        if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
+        if (jsonResponse['status'] == 'success' &&
+            jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
           return data.map((json) => Product.fromJson(json)).toList();
         } else {
@@ -158,10 +164,11 @@ class ApiService {
   Future<List<BannerModel>> getBanners() async {
     try {
       final response = await _dio.get('get_slider.php');
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = response.data;
-        if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
+        if (jsonResponse['status'] == 'success' &&
+            jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
           return data.map((json) => BannerModel.fromJson(json)).toList();
         } else {
@@ -176,17 +183,17 @@ class ApiService {
   }
 
   Future<List<NewsItem>> getNews({int limit = 8}) async {
-    try {
-      final response = await _dio.get('get_news.php', queryParameters: {'limit': limit});
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> json = response.data;
-        if (json['status'] == 'success' && json['data'] != null) {
-          return (json['data'] as List).map((e) => NewsItem.fromJson(e as Map<String, dynamic>)).toList();
-        }
-      }
-      return [];
-    } catch (_) {
-      return [];
+    final response =
+        await _dio.get('get_news.php', queryParameters: {'limit': limit});
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load news');
     }
+    final Map<String, dynamic> json = response.data;
+    if (json['status'] != 'success' || json['data'] is! List) {
+      throw const FormatException('Invalid news response');
+    }
+    return (json['data'] as List)
+        .map((item) => NewsItem.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 }

@@ -39,11 +39,9 @@ class SuccessScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Возвращаемся на главный экран (очищаем весь стек навигации до главной)
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  child: const Text('Вернуться на главную', style: TextStyle(fontSize: 18)),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Вернуться на главную',
+                      style: TextStyle(fontSize: 18)),
                 ),
               ),
             ],
