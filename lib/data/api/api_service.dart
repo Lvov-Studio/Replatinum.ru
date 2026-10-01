@@ -110,6 +110,8 @@ class ApiService {
         continue;
       }
       final detail = await getProductDetail(parent.id);
+      final previewParent = parent.copyWith(
+          ruStoreWarning: parent.ruStoreWarning || detail.ruStoreWarning);
       final marked = detail.offers
           .where((o) => o.properties.any((p) =>
               p.code == code &&
@@ -120,12 +122,12 @@ class ApiService {
         final priced = detail.offers.where((o) => o.price > 0).toList()
           ..sort((a, b) => a.price.compareTo(b.price));
         if (priced.isEmpty) {
-          result.add(parent);
+          result.add(previewParent);
         } else {
-          result.add(_offerPreview(parent, priced.first));
+          result.add(_offerPreview(previewParent, priced.first));
         }
       } else {
-        result.addAll(marked.map((o) => _offerPreview(parent, o)));
+        result.addAll(marked.map((o) => _offerPreview(previewParent, o)));
       }
     }
     final unique = <String, Product>{};
@@ -143,6 +145,7 @@ class ApiService {
       image: offer.image.isEmpty ? parent.image : offer.image,
       storePrice: offer.storePrice,
       canBuy: offer.canBuy,
+      ruStoreWarning: parent.ruStoreWarning,
       specs: offer.specs);
 
   Future<ProductDetail> getProductDetail(String id) async {

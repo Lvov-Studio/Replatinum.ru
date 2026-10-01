@@ -16,6 +16,7 @@ class SavedProduct {
         'name': product.name,
         'price': product.price,
         'image': product.image,
+        'rustore_warning': product.ruStoreWarning,
         'specs': specs
             .map((s) => {'name': s.name, 'value': s.value, 'group': s.group})
             .toList()

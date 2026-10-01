@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../screens/main_screen.dart';
+import 'saved_products_shortcuts.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const CustomAppBar({super.key, this.collapsed = false});
+  const CustomAppBar(
+      {super.key, this.collapsed = false, this.showSaved = false});
 
   final bool collapsed;
+  final bool showSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +40,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                     color: Colors.white, size: 20),
               ),
             ),
-      title: collapsed
+      title: collapsed || showSaved
           ? null
           : RichText(
               text: const TextSpan(
@@ -53,6 +56,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: collapsed
           ? null
           : [
+              if (showSaved) const SavedProductsActions(),
               Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: IconButton(

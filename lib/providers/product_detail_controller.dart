@@ -70,7 +70,8 @@ class ProductDetailController extends ChangeNotifier {
       id: detail!.id,
       name: name,
       price: price,
-      image: images.isEmpty ? preview.image : images.first);
+      image: images.isEmpty ? preview.image : images.first,
+      ruStoreWarning: detail!.ruStoreWarning);
   Map<String, List<OfferProperty>> get variantGroups {
     final groups = <String, Map<String, OfferProperty>>{};
     for (final o in detail?.offers ?? <Offer>[]) {

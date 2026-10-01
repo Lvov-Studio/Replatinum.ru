@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'home_screen.dart';
 import 'catalog_screen.dart';
 import 'cart_screen.dart';
 import 'placeholder_screens.dart';
-import 'saved_products_screen.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../data/models/category_model.dart';
@@ -15,13 +13,18 @@ import '../widgets/burger_menu.dart';
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
+  static const homeTab = 0;
+  static const catalogTab = 1;
+  static const cartTab = 2;
+  static const profileTab = 3;
+
   // GlobalKey для открытия drawer из CustomAppBar
   static final GlobalKey<ScaffoldState> scaffoldKey =
       GlobalKey<ScaffoldState>();
 
   // Вложенные навигаторы для каждого таба (нижнее меню не исчезает)
   static final tabNavigatorKeys = List.generate(
-    5,
+    4,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -40,6 +43,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    MainScreen.currentTabIndex = MainScreen.homeTab;
+  }
+
   void switchToTab(int index) {
     final navState = MainScreen.tabNavigatorKeys[index].currentState;
 
@@ -48,7 +57,9 @@ class _MainScreenState extends State<MainScreen> {
       if (navState != null && navState.canPop()) {
         navState.popUntil((r) => r.isFirst);
       }
-      if (index == 2) context.read<ProductProvider>().clearCategory();
+      if (index == MainScreen.catalogTab) {
+        context.read<ProductProvider>().clearCategory();
+      }
       return;
     }
 
@@ -60,14 +71,13 @@ class _MainScreenState extends State<MainScreen> {
   /// Переключиться на каталог с фильтром категории
   void switchToCatalog({Category? category}) {
     context.read<ProductProvider>().setCategory(category);
-    MainScreen.currentTabIndex = 2;
-    setState(() => _currentIndex = 2);
+    MainScreen.currentTabIndex = MainScreen.catalogTab;
+    setState(() => _currentIndex = MainScreen.catalogTab);
   }
 
   Widget _buildTabScreen(int index) {
     const screens = [
       HomeScreen(),
-      SavedProductsScreen(),
       CatalogScreen(),
       CartScreen(),
       ProfileScreen(),
@@ -82,12 +92,6 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Тёмный статус-бар под цвет шапки
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ));
-
     return PopScope(
       // Перехватываем кнопку «Назад» — сначала пробуем поп внутри таба
       canPop: false,
@@ -104,7 +108,7 @@ class _MainScreenState extends State<MainScreen> {
         drawer: const BurgerMenu(),
         body: IndexedStack(
           index: _currentIndex,
-          children: List.generate(5, _buildTabScreen),
+          children: List.generate(4, _buildTabScreen),
         ),
         bottomNavigationBar: _buildBottomNav(context),
       ),
@@ -146,46 +150,35 @@ class _MainScreenState extends State<MainScreen> {
                 inactiveColor: inactiveColor,
                 onTap: () => switchToTab(0),
               ),
-              // 1 — Избранное
+              // 1 — Каталог
               _TabItem(
-                index: 1,
-                currentIndex: _currentIndex,
-                icon: Icons.favorite_outline,
-                activeIcon: Icons.favorite,
-                label: 'Избранное',
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => switchToTab(1),
-              ),
-              // 2 — Каталог
-              _TabItem(
-                index: 2,
+                index: MainScreen.catalogTab,
                 currentIndex: _currentIndex,
                 icon: Icons.grid_view_outlined,
                 activeIcon: Icons.grid_view,
                 label: 'Каталог',
                 activeColor: activeColor,
                 inactiveColor: inactiveColor,
-                onTap: () => switchToTab(2),
+                onTap: () => switchToTab(MainScreen.catalogTab),
               ),
-              // 3 — Корзина (с бейджем)
+              // 2 — Корзина (с бейджем)
               _CartTabItem(
-                index: 3,
+                index: MainScreen.cartTab,
                 currentIndex: _currentIndex,
                 activeColor: activeColor,
                 inactiveColor: inactiveColor,
-                onTap: () => switchToTab(3),
+                onTap: () => switchToTab(MainScreen.cartTab),
               ),
-              // 4 — Кабинет
+              // 3 — Кабинет
               _TabItem(
-                index: 4,
+                index: MainScreen.profileTab,
                 currentIndex: _currentIndex,
                 icon: Icons.person_outline,
                 activeIcon: Icons.person,
                 label: 'Кабинет',
                 activeColor: activeColor,
                 inactiveColor: inactiveColor,
-                onTap: () => switchToTab(4),
+                onTap: () => switchToTab(MainScreen.profileTab),
               ),
             ],
           ),

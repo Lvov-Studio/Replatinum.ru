@@ -47,7 +47,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         }
       },
       child: Scaffold(
-        appBar: const CustomAppBar(),
+        appBar: const CustomAppBar(showSaved: true),
         body: Column(
           children: [
             // ── Строка поиска ──────────────────────────────────

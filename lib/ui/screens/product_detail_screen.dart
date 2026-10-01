@@ -61,7 +61,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _openCart() {
     final main = MainScreen.of(context);
     Navigator.of(context).pop();
-    main?.switchToTab(3);
+    main?.switchToTab(MainScreen.cartTab);
   }
 
   Future<void> _purchase() async {

@@ -25,7 +25,7 @@ class CartScreen extends StatelessWidget {
       MaterialPageRoute<void>(builder: (_) => const SuccessScreen()),
     );
     if (!context.mounted) return;
-    MainScreen.of(context)?.switchToTab(0);
+    MainScreen.of(context)?.switchToTab(MainScreen.homeTab);
   }
 
   @override
@@ -254,6 +254,8 @@ class CartScreen extends StatelessWidget {
                         onPressed:
                             cart.canCheckout ? () => _checkout(context) : null,
                         style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: Colors.white,
                           minimumSize: const Size(double.infinity, 56),
                         ),
                         child: const Text(

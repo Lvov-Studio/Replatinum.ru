@@ -171,12 +171,16 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                 height: 56,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submitOrder,
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    disabledForegroundColor: Colors.white,
+                  ),
                   child: _isLoading
                       ? const SizedBox(
                           height: 24,
                           width: 24,
                           child: CircularProgressIndicator(
-                            color: AppColors.onPrimary,
+                            color: Colors.white,
                             strokeWidth: 2,
                           ),
                         )
