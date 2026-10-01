@@ -4,6 +4,7 @@ import '../models/product_model.dart';
 import '../models/product_detail_model.dart';
 import '../models/banner_model.dart';
 import '../models/news_model.dart';
+import '../models/cart_quote.dart';
 
 class ApiService {
   late final Dio _dio;
@@ -184,8 +185,17 @@ class ApiService {
     }
   }
 
-  Future<bool> createOrder(String name, String phone, String email,
-      List<Map<String, dynamic>> items) async {
+  Future<CartQuote> quoteCart(List<Map<String, dynamic>> items) async {
+    final response = await _dio.post('quote_cart.php', data: {'items': items});
+    if (response.data is! Map || response.data['status'] != 'success') {
+      throw const FormatException('Cart quote unavailable');
+    }
+    return CartQuote.fromJson(Map<String, dynamic>.from(response.data['data']));
+  }
+
+  Future<bool> createOrder(
+      String name, String phone, String email, List<Map<String, dynamic>> items,
+      {required String quoteId}) async {
     try {
       final response = await _dio.post(
         'create_order.php',
@@ -194,6 +204,7 @@ class ApiService {
           'phone': phone,
           'email': email,
           'items': items,
+          'quote_id': quoteId,
         },
       );
 

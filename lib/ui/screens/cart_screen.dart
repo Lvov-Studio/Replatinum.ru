@@ -85,9 +85,9 @@ class CartScreen extends StatelessWidget {
                               border: Border.all(color: AppColors.border),
                             ),
                             clipBehavior: Clip.antiAlias,
-                            child: product.image.isNotEmpty
+                            child: cartItem.image.isNotEmpty
                                 ? CachedNetworkImage(
-                                    imageUrl: product.image,
+                                    imageUrl: cartItem.image,
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => const Center(
                                         child: CircularProgressIndicator()),
@@ -129,7 +129,7 @@ class CartScreen extends StatelessWidget {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        formatPrice(cartItem.unitPrice),
+                                        formatPrice(cart.priceFor(cartItem)),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
@@ -192,12 +192,51 @@ class CartScreen extends StatelessWidget {
                 child: SafeArea(
                   child: Column(
                     children: [
+                      if (cart.discountAmount > 0) ...[
+                        Text(cart.quote!.promotionName,
+                            style: Theme.of(context).textTheme.bodyMedium),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Товары'),
+                            Text(formatPrice(cart.subtotal)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Скидка за количество'),
+                            Text('− ${formatPrice(cart.discountAmount)}'),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (cart.quote?.hint.isNotEmpty == true) ...[
+                        Text(cart.quote!.hint),
+                        const SizedBox(height: 12),
+                      ],
+                      if (cart.checking) ...[
+                        const LinearProgressIndicator(),
+                        const SizedBox(height: 8),
+                        const Text('Проверяем цену и скидку…'),
+                        const SizedBox(height: 12),
+                      ],
+                      if (cart.quoteError.isNotEmpty) ...[
+                        Text(cart.quoteError,
+                            style: const TextStyle(color: AppColors.error)),
+                        TextButton(
+                          onPressed: cart.refreshQuote,
+                          child: const Text('Повторить проверку'),
+                        ),
+                      ],
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Итого:',
-                            style: TextStyle(
+                          Text(
+                            cart.quote == null ? 'Предварительно:' : 'Итого:',
+                            style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                           Text(
@@ -212,7 +251,8 @@ class CartScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => _checkout(context),
+                        onPressed:
+                            cart.canCheckout ? () => _checkout(context) : null,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 56),
                         ),

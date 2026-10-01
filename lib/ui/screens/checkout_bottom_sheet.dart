@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../data/api/api_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/price_formatter.dart';
 
 class CheckoutBottomSheet extends StatefulWidget {
   const CheckoutBottomSheet({super.key});
@@ -38,22 +39,22 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
 
     final cartProvider = context.read<CartProvider>();
     final apiService = ApiService();
-
-    // Формируем JSON товаров
-    final items = cartProvider.items.values.map((item) {
-      return {
-        // Для товара с торговым предложением Bitrix ожидает ID оффера.
-        'id': int.tryParse(item.catalogId) ?? 0,
-        'quantity': item.quantity,
-      };
-    }).toList();
+    final previousQuote = cartProvider.quote?.id;
 
     try {
+      if (!await cartProvider.refreshQuote()) {
+        throw Exception('Не удалось проверить корзину. Попробуйте ещё раз.');
+      }
+      if (cartProvider.quote!.id != previousQuote) {
+        throw Exception(
+            'Цена или скидка изменилась. Проверьте итог и подтвердите ещё раз.');
+      }
       final success = await apiService.createOrder(
         _nameController.text.trim(),
         _phoneController.text.trim(),
         _emailController.text.trim(),
-        items,
+        cartProvider.orderItems,
+        quoteId: cartProvider.quote!.id,
       );
 
       if (success && mounted) {
@@ -61,6 +62,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
         Navigator.pop(context, true);
       }
     } catch (e) {
+      await cartProvider.refreshQuote();
       if (mounted) {
         setState(() {
           _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -106,6 +108,19 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
+              Consumer<CartProvider>(builder: (context, cart, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (cart.discountAmount > 0)
+                      Text(
+                          'Скидка за количество: − ${formatPrice(cart.discountAmount)}'),
+                    Text('Итого: ${formatPrice(cart.totalAmount)}',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              }),
               if (_errorMessage.isNotEmpty) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
