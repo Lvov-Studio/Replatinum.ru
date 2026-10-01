@@ -64,9 +64,14 @@ void main() {
         expect(tester.getTopLeft(first).dx, 10);
         final cardWidth = tester.getSize(first).width;
         if (scale == 1) {
-          final imageHeight = cardWidth < 190 ? cardWidth * .85 : 170;
+          final imageHeight = (cardWidth < 190 ? cardWidth * .85 : 170) + 48;
           expect(tester.getSize(first).height, closeTo(imageHeight + 126, .1));
         }
+        expect(
+            tester.getBottomLeft(find.byTooltip('В избранное').first).dy,
+            lessThanOrEqualTo(tester
+                .getTopLeft(find.byKey(const ValueKey('preview-image-sku-1')))
+                .dy));
         await tester.tap(find.text('В корзину').first);
         await tester.pumpAndSettle();
         expect(cart.items.values.single.key, '1:sku-1');

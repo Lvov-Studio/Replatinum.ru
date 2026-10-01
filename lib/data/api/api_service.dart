@@ -5,6 +5,7 @@ import '../models/product_detail_model.dart';
 import '../models/banner_model.dart';
 import '../models/news_model.dart';
 import '../models/cart_quote.dart';
+import '../models/catalog_filter.dart';
 
 class ApiService {
   late final Dio _dio;
@@ -88,6 +89,82 @@ class ApiService {
     } catch (e) {
       throw Exception('Error fetching products: $e');
     }
+  }
+
+  /// Complete section snapshot: facets must include variants beyond page one.
+  Future<List<CatalogItem>> getCatalogItems(
+      {String? categoryId, String? type, bool Function()? isCurrent}) async {
+    final parents = <Product>[];
+    var offset = 0;
+    while (true) {
+      if (isCurrent?.call() == false) return [];
+      final page = await getProducts(
+          categoryId: categoryId, type: type, limit: 50, offset: offset);
+      final items = page['products'] as List<Product>;
+      if (items.isEmpty && offset < (page['total'] as num)) {
+        throw StateError('Incomplete catalog response');
+      }
+      parents.addAll(items);
+      offset += items.length;
+      if (offset >= (page['total'] as num)) break;
+    }
+    final result = <String, CatalogItem>{};
+    for (var start = 0; start < parents.length; start += 4) {
+      if (isCurrent?.call() == false) return [];
+      final batch = parents.skip(start).take(4);
+      final groups = await Future.wait(batch.map((parent) async {
+        final detail = await getProductDetail(parent.id);
+        Map<String, CatalogAttribute> attributes(
+                List<ProductSpec> specs, String scope) =>
+            {
+              for (final spec in specs)
+                if (spec.value.trim().isNotEmpty && spec.name.trim().isNotEmpty)
+                  '$scope:${spec.code.isEmpty ? '${spec.group}:${spec.name}' : spec.code}':
+                      CatalogAttribute(spec.name, spec.value.trim()),
+            };
+        final modelAttributes = attributes(detail.specs, 'model');
+        final preview = parent.copyWith(
+            ruStoreWarning: parent.ruStoreWarning || detail.ruStoreWarning);
+        if (detail.offers.isNotEmpty) {
+          final orderedOffers = [
+            ...detail.offers.where((o) => o.price > 0 && o.canBuy == true),
+            ...detail.offers.where((o) => o.price > 0 && o.canBuy != true),
+            ...detail.offers.where((o) => o.price <= 0),
+          ];
+          return [
+            for (final offer in orderedOffers)
+              if (parent.offerId == null || parent.offerId == offer.id)
+                CatalogItem(
+                    _offerPreview(preview, offer),
+                    {
+                      ...modelAttributes,
+                      ...attributes(offer.specs, 'offer'),
+                    },
+                    path: Uri.tryParse(detail.url)?.path ?? '')
+          ];
+        }
+        return [
+          CatalogItem(
+              Product(
+                  id: parent.id,
+                  name: detail.name,
+                  price: detail.price,
+                  storePrice: detail.storePrice,
+                  canBuy: detail.canBuy,
+                  image: detail.images.isEmpty
+                      ? parent.image
+                      : detail.images.first,
+                  ruStoreWarning: preview.ruStoreWarning,
+                  specs: detail.specs),
+              modelAttributes,
+              path: Uri.tryParse(detail.url)?.path ?? '')
+        ];
+      }));
+      for (final item in groups.expand((group) => group)) {
+        result['${item.product.id}:${item.product.offerId ?? 'base'}'] = item;
+      }
+    }
+    return result.values.toList();
   }
 
   Future<List<Product>> getHomeProducts(String type) async {

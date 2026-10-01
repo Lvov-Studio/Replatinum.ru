@@ -25,13 +25,15 @@ class OfferProperty {
 }
 
 class ProductSpec {
-  final String name, value, group;
+  final String name, value, group, code;
   const ProductSpec(
       {required this.name,
       required this.value,
+      this.code = '',
       this.group = 'Общие характеристики'});
   factory ProductSpec.fromJson(Map<String, dynamic> j) => ProductSpec(
       name: '${j['name'] ?? ''}',
+      code: '${j['code'] ?? ''}',
       value: '${j['value'] ?? ''}',
       group: '${j['group'] ?? 'Общие характеристики'}');
 }

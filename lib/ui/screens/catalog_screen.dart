@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/category_provider.dart';
-import '../../providers/cart_provider.dart';
 import '../../data/models/category_model.dart';
-import '../../data/models/product_model.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/price_formatter.dart';
-import '../widgets/custom_app_bar.dart';
-import 'product_detail_screen.dart';
+import 'package:flutter/services.dart';
+import '../widgets/catalog_category_list.dart';
+import '../widgets/saved_products_shortcuts.dart';
+import 'main_screen.dart';
 import 'product_search_delegate.dart';
+import '../widgets/catalog_products_view.dart';
 
 class CatalogScreen extends StatefulWidget {
   final Category? initialCategory;
@@ -25,6 +24,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // Загружаем категории если нет
       context.read<CategoryProvider>().fetchCategories();
       // Если передана категория — грузим товары, иначе ничего
@@ -43,60 +43,78 @@ class _CatalogScreenState extends State<CatalogScreen> {
       canPop: productProvider.selectedCategory == null,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && productProvider.selectedCategory != null) {
-          productProvider.clearCategory();
+          productProvider.goBack();
         }
       },
       child: Scaffold(
-        appBar: const CustomAppBar(showSaved: true),
+        backgroundColor: Colors.white,
+        appBar: productProvider.selectedCategory != null
+            ? null
+            : AppBar(
+                toolbarHeight: 48,
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.mainText,
+                surfaceTintColor: Colors.white,
+                scrolledUnderElevation: 0,
+                systemOverlayStyle: SystemUiOverlayStyle.dark,
+                leading: IconButton(
+                  tooltip: 'Открыть меню',
+                  onPressed: () =>
+                      MainScreen.scaffoldKey.currentState?.openDrawer(),
+                  icon: const Icon(Icons.menu_rounded),
+                ),
+                actions: const [SavedProductsActions(), SizedBox(width: 8)],
+              ),
         body: Column(
           children: [
-            // ── Строка поиска ──────────────────────────────────
-            Container(
-              color: AppColors.darkAccent,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: GestureDetector(
-                onTap: () => showSearch(
-                  context: context,
-                  delegate: ProductSearchDelegate(),
-                ),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Text(
-                          'Поиск по каталогу...',
-                          style: TextStyle(
-                              color: AppColors.secondaryText, fontSize: 15),
+            if (productProvider.selectedCategory == null)
+              Material(
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: InkWell(
+                    key: const ValueKey('catalog-search'),
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => showSearch(
+                      context: context,
+                      delegate: ProductSearchDelegate(),
+                    ),
+                    child: SizedBox(
+                      height: 48,
+                      child: Center(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8E8ED),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            child: Row(children: [
+                              const Icon(Icons.search,
+                                  size: 20, color: AppColors.secondaryText),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child: const Text('Поиск товаров',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          color: AppColors.mainText,
+                                          fontSize: 14))),
+                            ]),
+                          ),
                         ),
                       ),
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryAccent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.search,
-                          color: AppColors.onPrimary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-
+            if (productProvider.selectedCategory == null)
+              const Divider(height: 1, thickness: 1, color: AppColors.border),
             // ── Контент ────────────────────────────────────────
             Expanded(
               child: productProvider.selectedCategory != null
-                  ? _ProductsView(provider: productProvider)
+                  ? CatalogProductsView(provider: productProvider)
                   : _CategoriesView(),
             ),
           ],
@@ -140,368 +158,12 @@ class _CategoriesView extends StatelessWidget {
           return const Center(child: Text('Разделы не найдены'));
         }
 
-        return CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.all(12),
-              sliver: SliverGrid(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _CategoryCard(
-                    category: catProvider.categories[index],
-                  ),
-                  childCount: catProvider.categories.length,
-                ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.85,
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          ],
+        return CatalogCategoryList(
+          categories: catProvider.categories,
+          onSelected: (category) =>
+              context.read<ProductProvider>().fetchProducts(category: category),
         );
       },
-    );
-  }
-}
-
-// ─── Карточка категории (как на сайте) ─────────────────────────────────────
-class _CategoryCard extends StatelessWidget {
-  final Category category;
-  const _CategoryCard({required this.category});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        context.read<ProductProvider>().fetchProducts(category: category);
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Название раздела
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: Text(
-                category.name,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.mainText,
-                  height: 1.25,
-                ),
-                maxLines: 2,
-              ),
-            ),
-            // Картинка раздела
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: category.image.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: category.image,
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                        errorWidget: (_, __, ___) => const Icon(
-                          Icons.category_outlined,
-                          size: 64,
-                          color: Color(0xFFCCCCCC),
-                        ),
-                      )
-                    : const Center(
-                        child: Icon(Icons.category_outlined,
-                            size: 64, color: Color(0xFFCCCCCC)),
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Страница товаров внутри раздела ───────────────────────────────────────
-class _ProductsView extends StatelessWidget {
-  final ProductProvider provider;
-  const _ProductsView({required this.provider});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Заголовок раздела + кнопка назад к разделам
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: Row(
-            children: [
-              IconButton.filledTonal(
-                onPressed: provider.clearCategory,
-                tooltip: 'Вернуться к разделам',
-                icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  provider.selectedCategory?.name ?? 'Каталог',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.mainText,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Text(
-                '${provider.total} товаров',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.secondaryText,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: provider.isLoading && provider.products.isEmpty
-              ? const Center(
-                  child:
-                      CircularProgressIndicator(color: AppColors.primaryAccent))
-              : provider.error.isNotEmpty && provider.products.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.wifi_off,
-                              size: 56, color: AppColors.secondaryText),
-                          const SizedBox(height: 12),
-                          const Text('Не удалось загрузить товары'),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: () => provider.fetchProducts(
-                              category: provider.selectedCategory,
-                            ),
-                            child: const Text('Повторить'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : provider.products.isEmpty
-                      ? const Center(
-                          child: Text('В этом разделе пока нет товаров',
-                              style: TextStyle(color: AppColors.secondaryText)))
-                      : CustomScrollView(
-                          slivers: [
-                            SliverPadding(
-                              padding: const EdgeInsets.all(12),
-                              sliver: SliverGrid(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) => _ProductCard(
-                                      product: provider.products[index]),
-                                  childCount: provider.products.length,
-                                ),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                  childAspectRatio: 0.62,
-                                ),
-                              ),
-                            ),
-                            if (provider.hasMore)
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                  child: provider.isLoadingMore
-                                      ? const Center(
-                                          child: Padding(
-                                          padding: EdgeInsets.all(12),
-                                          child: CircularProgressIndicator(
-                                              color: AppColors.primaryAccent),
-                                        ))
-                                      : OutlinedButton(
-                                          onPressed: () => provider.loadMore(),
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor:
-                                                AppColors.primaryAccent,
-                                            side: const BorderSide(
-                                                color: AppColors.primaryAccent,
-                                                width: 1.5),
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10)),
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 14),
-                                          ),
-                                          child: Text(
-                                            'Показать ещё '
-                                            '(осталось ${provider.total - provider.products.length})',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w600),
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            if (provider.loadMoreError.isNotEmpty)
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                  child: Text(
-                                    provider.loadMoreError,
-                                    textAlign: TextAlign.center,
-                                    style:
-                                        const TextStyle(color: AppColors.error),
-                                  ),
-                                ),
-                              ),
-                            const SliverToBoxAdapter(
-                                child: SizedBox(height: 12)),
-                          ],
-                        ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Карточка товара ────────────────────────────────────────────────────────
-class _ProductCard extends StatelessWidget {
-  final Product product;
-  const _ProductCard({required this.product});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(productPreview: product)),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 5,
-              child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Container(
-                  color: const Color(0xFFF8F8F8),
-                  width: double.infinity,
-                  child: product.image.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: product.image,
-                          fit: BoxFit.contain,
-                          placeholder: (_, __) => const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primaryAccent),
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => const Center(
-                            child: Icon(Icons.image_outlined,
-                                size: 48, color: Color(0xFFCCCCCC)),
-                          ),
-                        )
-                      : const Center(
-                          child: Icon(Icons.image_outlined,
-                              size: 48, color: Color(0xFFCCCCCC)),
-                        ),
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        product.name,
-                        style: const TextStyle(fontSize: 11, height: 1.35),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      product.price > 0
-                          ? formatPrice(product.price)
-                          : 'По запросу',
-                      style: const TextStyle(
-                        color: AppColors.primaryText,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          context.read<CartProvider>().addItem(product);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Товар добавлен в корзину'),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryAccent,
-                          foregroundColor: AppColors.onPrimary,
-                          padding: EdgeInsets.zero,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('В корзину'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

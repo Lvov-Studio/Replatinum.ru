@@ -15,10 +15,18 @@ class SavedProduct {
         'sku': skuId,
         'name': product.name,
         'price': product.price,
+        'offer_id': product.offerId,
+        'store_price': product.storePrice,
+        'can_buy': product.canBuy,
         'image': product.image,
         'rustore_warning': product.ruStoreWarning,
         'specs': specs
-            .map((s) => {'name': s.name, 'value': s.value, 'group': s.group})
+            .map((s) => {
+                  'name': s.name,
+                  'value': s.value,
+                  'group': s.group,
+                  'code': s.code
+                })
             .toList()
       };
   factory SavedProduct.fromJson(Map<String, dynamic> j) =>
