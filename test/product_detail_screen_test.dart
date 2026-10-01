@@ -47,12 +47,19 @@ class ScreenApi extends ApiService {
 
 void main() {
   group('ProductDetailScreen', () {
-    for (final width in [360.0, 600.0]) {
+    for (final (width, scale) in [
+      (320.0, 1.0),
+      (320.0, 1.3),
+      (360.0, 1.0),
+      (600.0, 1.0)
+    ]) {
       testWidgets(
-          'should show both prices and installment calculation at width $width',
+          'should show prices, installment and unavailable SKU at width $width and font scale $scale',
           (tester) async {
         tester.view.physicalSize = Size(width * 2, 1600);
         tester.view.devicePixelRatio = 2;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         await tester.pumpWidget(MultiProvider(
@@ -77,6 +84,18 @@ void main() {
         await tester.tap(find.text('12 мес.'));
         await tester.pumpAndSettle();
         expect(find.text('${formatPrice(10)}/мес.'), findsOneWidget);
+        Navigator.of(tester.element(find.byType(InstallmentCalculator))).pop();
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text('512 ГБ'), -180,
+            scrollable: find.byType(Scrollable).first);
+        await Scrollable.ensureVisible(tester.element(find.text('512 ГБ')),
+            alignment: .5);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('512 ГБ'));
+        await tester.pumpAndSettle();
+        expect(find.text('Цена по запросу'), findsWidgets);
+        expect(find.text('Под заказ'), findsWidgets);
+        expect(find.text(formatPrice(100)), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }

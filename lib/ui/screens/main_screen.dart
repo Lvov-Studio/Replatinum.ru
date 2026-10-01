@@ -130,7 +130,9 @@ class _MainScreenState extends State<MainScreen> {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 56,
+          height: 56 +
+              (MediaQuery.textScalerOf(context).scale(11) - 11).clamp(0, 33) *
+                  4,
           child: Row(
             children: [
               // 0 — Главная
@@ -241,6 +243,9 @@ class _TabItem extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isActive ? activeColor : inactiveColor,
                   fontSize: 11,
@@ -333,6 +338,9 @@ class _CartTabItem extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'Корзина',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isActive ? activeColor : inactiveColor,
                   fontSize: 11,
