@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/category_provider.dart';
-import '../../providers/cart_provider.dart';
+import '../../providers/saved_products_provider.dart';
 import '../../data/api/api_service.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/news_model.dart';
@@ -17,6 +17,7 @@ import '../widgets/banner_slider.dart';
 import 'product_search_delegate.dart';
 import 'main_screen.dart';
 import 'product_detail_screen.dart';
+import 'saved_products_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,6 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showHeader = true;
 
   bool _handleScroll(UserScrollNotification notification) {
+    if (notification.depth != 0 || notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
     final showHeader = switch (notification.direction) {
       ScrollDirection.reverse => false,
       ScrollDirection.forward => true,
@@ -60,8 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<List<Product>> _loadSection(String type) async {
-    final result = await _api.getProducts(type: type, limit: 10);
-    return result['products'] as List<Product>;
+    return _api.getHomeProducts(type);
   }
 
   Future<void> _ignoreFailure(Future<dynamic> future) async {
@@ -119,6 +122,19 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           _buildSearchBar(),
+          Consumer<SavedProductsProvider>(builder: (context, saved, _) {
+            if (saved.comparison.isEmpty) return const SizedBox.shrink();
+            return Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const SavedProductsScreen(compare: true))),
+                    icon: const Icon(Icons.bar_chart, size: 20),
+                    label: Text('Сравнение (${saved.comparison.length})')));
+          }),
           Expanded(
             child: NotificationListener<UserScrollNotification>(
               onNotification: _handleScroll,
@@ -534,12 +550,19 @@ class _SectionBlockState extends State<_SectionBlock> {
         final screenW = MediaQuery.of(context).size.width;
         final cardWidth = (screenW - 30) / 2;
         final imageHeight = cardWidth < 190 ? cardWidth * 0.85 : 170.0;
-        final cardH = imageHeight + 154;
+        final cardH = imageHeight + 212;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeading(widget.title),
+            Row(children: [
+              Expanded(child: _SectionHeading(widget.title)),
+              Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text('${products.length} товаров',
+                      style: const TextStyle(
+                          color: AppColors.secondaryText, fontSize: 12)))
+            ]),
             SizedBox(
               height: cardH,
               child: PageView.builder(
@@ -717,11 +740,47 @@ class _ProductCard extends StatelessWidget {
                             fontSize: 12,
                             height: 1.25,
                             color: AppColors.mainText),
-                        maxLines: 5,
+                        maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(height: 4),
+                    Consumer<SavedProductsProvider>(
+                        builder: (context, saved, _) {
+                      final id = product.offerId ?? product.id;
+                      final item = SavedProduct(product, id, product.specs);
+                      return Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            IconButton(
+                                tooltip: saved.favorites.containsKey(id)
+                                    ? 'Убрать из избранного'
+                                    : 'В избранное',
+                                onPressed: saved.ready
+                                    ? () => saved.toggle(item)
+                                    : null,
+                                iconSize: 21,
+                                icon: Icon(
+                                    saved.favorites.containsKey(id)
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: saved.favorites.containsKey(id)
+                                        ? Colors.red
+                                        : AppColors.darkAccent)),
+                            IconButton(
+                                tooltip: 'Сравнение товаров',
+                                onPressed: saved.ready
+                                    ? () {
+                                        saved.toggle(item, compare: true);
+                                      }
+                                    : null,
+                                iconSize: 21,
+                                icon: Icon(Icons.bar_chart,
+                                    color: saved.comparison.containsKey(id)
+                                        ? AppColors.primaryText
+                                        : AppColors.darkAccent)),
+                          ]);
+                    }),
                     Text(
                       product.price > 0
                           ? formatPrice(product.price)
@@ -735,18 +794,14 @@ class _ProductCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
-                      height: 36,
+                      height: 44,
                       child: ElevatedButton(
                         onPressed: () {
-                          context.read<CartProvider>().addItem(product);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: const Text('Добавлено в корзину'),
-                            duration: const Duration(seconds: 1),
-                            backgroundColor: AppColors.darkAccent,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ));
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => ProductDetailScreen(
+                                      productPreview: product)));
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.darkAccent,
@@ -756,7 +811,7 @@ class _ProductCard extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(7)),
                         ),
-                        child: const Text('В корзину',
+                        child: const Text('Выбрать вариант',
                             style: TextStyle(
                                 fontSize: 13, fontWeight: FontWeight.w600)),
                       ),

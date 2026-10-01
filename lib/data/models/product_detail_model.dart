@@ -1,118 +1,138 @@
+num parseNumber(dynamic v) => v is num ? v : num.tryParse('$v') ?? 0;
+bool? parseAvailability(dynamic v) => switch (v) {
+      true || 'Y' || 1 => true,
+      false || 'N' || 0 => false,
+      _ => null
+    };
+List<String> parseImages(dynamic v) => v is List
+    ? v.map((e) => '$e').where((e) => e.isNotEmpty).toSet().toList()
+    : [];
+
 class OfferProperty {
-  final String code;
-  final String name;
-  final String value;
-
-  const OfferProperty({
-    required this.code,
-    required this.name,
-    required this.value,
-  });
-
-  factory OfferProperty.fromJson(Map<String, dynamic> json) => OfferProperty(
-        code: json['code']?.toString() ?? '',
-        name: json['name']?.toString() ?? '',
-        value: json['value']?.toString() ?? '',
-      );
+  final String code, name, value, image;
+  const OfferProperty(
+      {required this.code,
+      required this.name,
+      required this.value,
+      this.image = ''});
+  factory OfferProperty.fromJson(Map<String, dynamic> j) => OfferProperty(
+      code: '${j['code'] ?? ''}',
+      name: '${j['name'] ?? ''}',
+      value: j['value'] is List
+          ? (j['value'] as List).join(' / ')
+          : '${j['value'] ?? ''}',
+      image: '${j['image'] ?? ''}');
 }
 
+class ProductSpec {
+  final String name, value, group;
+  const ProductSpec(
+      {required this.name,
+      required this.value,
+      this.group = 'Общие характеристики'});
+  factory ProductSpec.fromJson(Map<String, dynamic> j) => ProductSpec(
+      name: '${j['name'] ?? ''}',
+      value: '${j['value'] ?? ''}',
+      group: '${j['group'] ?? 'Общие характеристики'}');
+}
+
+List<ProductSpec> parseSpecs(dynamic j) => j is List
+    ? j.map((e) => ProductSpec.fromJson(Map<String, dynamic>.from(e))).toList()
+    : [];
+
 class Offer {
-  final String id;
-  final String name;
-  final String image;
-  final num price;
+  final String id, name, image, description;
+  final num price, storePrice;
+  final bool? canBuy;
+  final List<String> images;
+  final List<ProductSpec> specs;
   final List<OfferProperty> properties;
-
-  const Offer({
-    required this.id,
-    required this.name,
-    required this.image,
-    required this.price,
-    required this.properties,
-  });
-
-  factory Offer.fromJson(Map<String, dynamic> json) => Offer(
-        id: json['id']?.toString() ?? '',
-        name: json['name']?.toString() ?? '',
-        image: json['image']?.toString() ?? '',
-        price: json['price'] is num ? json['price'] : num.tryParse(json['price'].toString()) ?? 0,
-        properties: json['properties'] is List
-            ? (json['properties'] as List)
-                .map((p) => OfferProperty.fromJson(p as Map<String, dynamic>))
-                .toList()
-            : [],
-      );
-
-  /// Значение свойства по коду
+  const Offer(
+      {required this.id,
+      required this.name,
+      required this.image,
+      required this.price,
+      required this.properties,
+      this.storePrice = 0,
+      this.canBuy,
+      this.description = '',
+      this.images = const [],
+      this.specs = const []});
+  factory Offer.fromJson(Map<String, dynamic> j) => Offer(
+      id: '${j['id'] ?? ''}',
+      name: '${j['name'] ?? ''}',
+      image: '${j['image'] ?? ''}',
+      price: parseNumber(j['price']),
+      storePrice: parseNumber(j['store_price']),
+      canBuy: parseAvailability(j['can_buy']),
+      description: '${j['description'] ?? ''}',
+      images: parseImages(j['images']),
+      specs: parseSpecs(j['specs']),
+      properties: j['properties'] is List
+          ? (j['properties'] as List)
+              .map((e) => OfferProperty.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+          : []);
   String? valueOf(String code) {
-    try {
-      return properties.firstWhere((p) => p.code == code).value;
-    } catch (_) {
-      return null;
+    for (final p in properties) {
+      if (p.code == code) return p.value;
     }
+    return null;
   }
 }
 
 class ProductDetail {
-  final String id;
-  final String name;
-  final num price;
-  final String description;
+  final String id, name, description, url, promoName;
+  final num price, storePrice;
+  final bool? canBuy;
+  final bool ruStoreWarning;
   final List<String> images;
   final List<Offer> offers;
-
-  const ProductDetail({
-    required this.id,
-    required this.name,
-    required this.price,
-    required this.description,
-    required this.images,
-    required this.offers,
-  });
-
-  factory ProductDetail.fromJson(Map<String, dynamic> json) {
-    // Фото
-    List<String> parsedImages = [];
-    if (json['images'] is List) {
-      parsedImages = (json['images'] as List)
-          .map((e) => e.toString())
-          .where((s) => s.isNotEmpty)
-          .toList();
-    } else if (json['image'] != null && json['image'].toString().isNotEmpty) {
-      parsedImages.add(json['image'].toString());
+  final List<ProductSpec> specs;
+  final List<(int, num)> promoTiers;
+  const ProductDetail(
+      {required this.id,
+      required this.name,
+      required this.price,
+      required this.description,
+      required this.images,
+      required this.offers,
+      this.storePrice = 0,
+      this.canBuy,
+      this.url = '',
+      this.ruStoreWarning = false,
+      this.specs = const [],
+      this.promoName = '',
+      this.promoTiers = const []});
+  factory ProductDetail.fromJson(Map<String, dynamic> j) {
+    final images = parseImages(j['images']);
+    if (images.isEmpty && '${j['image'] ?? ''}'.isNotEmpty) {
+      images.add('${j['image']}');
     }
-
-    // Цена
-    final rawPrice = json['price'];
-    final parsedPrice = rawPrice is num
-        ? rawPrice
-        : num.tryParse(rawPrice?.toString() ?? '') ?? 0;
-
-    // Офферы
-    final List<Offer> parsedOffers = [];
-    if (json['offers'] is List) {
-      for (final o in json['offers'] as List) {
-        parsedOffers.add(Offer.fromJson(o as Map<String, dynamic>));
-      }
-    }
-
-    // Если у товара нет своих фото — берём из офферов
-    if (parsedImages.isEmpty) {
-      for (final offer in parsedOffers) {
-        if (offer.image.isNotEmpty) {
-          parsedImages.add(offer.image);
-          break;
-        }
-      }
-    }
-
+    final promo = j['promotion'] is Map ? j['promotion'] as Map : const {};
     return ProductDetail(
-      id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
-      price: parsedPrice,
-      description: json['description']?.toString() ?? 'Описание отсутствует',
-      images: parsedImages,
-      offers: parsedOffers,
-    );
+        id: '${j['id'] ?? ''}',
+        name: '${j['name'] ?? ''}',
+        price: parseNumber(j['price']),
+        storePrice: parseNumber(j['store_price']),
+        canBuy: parseAvailability(j['can_buy']),
+        description: '${j['description'] ?? ''}',
+        url: '${j['url'] ?? ''}',
+        ruStoreWarning: j['rustore_warning'] == true,
+        images: images,
+        offers: j['offers'] is List
+            ? (j['offers'] as List)
+                .map((e) => Offer.fromJson(Map<String, dynamic>.from(e)))
+                .toList()
+            : [],
+        specs: parseSpecs(j['specs']),
+        promoName: '${promo['name'] ?? ''}',
+        promoTiers: promo['tiers'] is List
+            ? (promo['tiers'] as List)
+                .whereType<List>()
+                .where((e) => e.length == 2)
+                .map((e) => (parseNumber(e[0]).toInt(), parseNumber(e[1])))
+                .toList()
+            : []);
   }
 }

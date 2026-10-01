@@ -5,6 +5,7 @@ import 'home_screen.dart';
 import 'catalog_screen.dart';
 import 'cart_screen.dart';
 import 'placeholder_screens.dart';
+import 'saved_products_screen.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../data/models/category_model.dart';
@@ -66,7 +67,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildTabScreen(int index) {
     const screens = [
       HomeScreen(),
-      FavoritesScreen(),
+      SavedProductsScreen(),
       CatalogScreen(),
       CartScreen(),
       ProfileScreen(),

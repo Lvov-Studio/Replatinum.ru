@@ -32,7 +32,6 @@ class ApiService {
         return handler.next(e);
       },
     ));
-
   }
 
   Future<List<Category>> getCategories() async {
@@ -90,6 +89,61 @@ class ApiService {
     }
   }
 
+  Future<List<Product>> getHomeProducts(String type) async {
+    final parents = <Product>[];
+    var offset = 0;
+    while (true) {
+      final page = await getProducts(type: type, limit: 50, offset: offset);
+      final items = page['products'] as List<Product>;
+      parents.addAll(items);
+      offset += items.length;
+      if (items.isEmpty || offset >= (page['total'] as num)) break;
+    }
+    final code =
+        {'new': 'NEWPRODUCT', 'hit': 'SALELEADER', 'sale': 'DISCOUNT'}[type]!;
+    final result = <Product>[];
+    // V2 already returns selected SKUs; legacy returns parent products.
+    for (final parent in parents) {
+      if (parent.offerId != null) {
+        result.add(parent);
+        continue;
+      }
+      final detail = await getProductDetail(parent.id);
+      final marked = detail.offers
+          .where((o) => o.properties.any((p) =>
+              p.code == code &&
+              const ['да', 'y', 'yes', 'true', '1']
+                  .contains(p.value.toLowerCase())))
+          .toList();
+      if (marked.isEmpty) {
+        final priced = detail.offers.where((o) => o.price > 0).toList()
+          ..sort((a, b) => a.price.compareTo(b.price));
+        if (priced.isEmpty) {
+          result.add(parent);
+        } else {
+          result.add(_offerPreview(parent, priced.first));
+        }
+      } else {
+        result.addAll(marked.map((o) => _offerPreview(parent, o)));
+      }
+    }
+    final unique = <String, Product>{};
+    for (final product in result) {
+      unique['${product.id}:${product.offerId ?? 'base'}'] = product;
+    }
+    return unique.values.toList();
+  }
+
+  Product _offerPreview(Product parent, Offer offer) => Product(
+      id: parent.id,
+      offerId: offer.id,
+      name: offer.name,
+      price: offer.price,
+      image: offer.image.isEmpty ? parent.image : offer.image,
+      storePrice: offer.storePrice,
+      canBuy: offer.canBuy,
+      specs: offer.specs);
+
   Future<ProductDetail> getProductDetail(String id) async {
     try {
       final response =
@@ -108,6 +162,25 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error fetching product details: $e');
+    }
+  }
+
+  Future<void> submitProductInquiry(
+      {required String productId,
+      required String productName,
+      required String name,
+      required String phone,
+      required String comment}) async {
+    final response =
+        await _dio.post('https://replatinum.ru/local/ajax/preorder.php', data: {
+      'productId': int.tryParse(productId),
+      'productTitle': productName,
+      'name': name,
+      'phone': phone,
+      'comment': comment
+    });
+    if (response.data is! Map || response.data['success'] != true) {
+      throw Exception('Inquiry was not delivered');
     }
   }
 
