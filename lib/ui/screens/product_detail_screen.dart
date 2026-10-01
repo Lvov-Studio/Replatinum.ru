@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_html/flutter_html.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/product_model.dart';
 import '../../data/api/api_service.dart';
 import '../../providers/cart_provider.dart';
@@ -12,6 +10,7 @@ import '../../providers/saved_products_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../widgets/product_purchase_sheets.dart';
+import '../widgets/product_description.dart';
 import 'main_screen.dart';
 import 'saved_products_screen.dart';
 import 'info_screens.dart';
@@ -34,7 +33,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late final ProductDetailController _controller;
   final _gallery = PageController();
   int _image = 0;
-  bool _showSpecs = false, _expanded = false;
+  bool _showSpecs = false;
   @override
   void initState() {
     super.initState();
@@ -86,7 +85,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _controller.select(code, value);
     setState(() {
       _image = 0;
-      _expanded = false;
     });
     if (_gallery.hasClients) _gallery.jumpToPage(0);
   }
@@ -544,37 +542,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               style: TextStyle(fontSize: 12, color: AppColors.secondaryText))
         ] else if (c.description.isEmpty)
           const Text('Описание пока не добавлено.')
-        else ...[
-          ClipRect(
-              child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                      maxHeight: _expanded ? double.infinity : 240),
-                  child: SingleChildScrollView(
-                      physics: _expanded
-                          ? null
-                          : const NeverScrollableScrollPhysics(),
-                      child: Html(
-                          data: c.description,
-                          onLinkTap: (url, _, __) {
-                            final uri = Uri.tryParse(url ?? '');
-                            if (uri != null &&
-                                const ['https', 'http'].contains(uri.scheme)) {
-                              launchUrl(uri,
-                                  mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          style: {
-                            'body': Style(
-                                margin: Margins.zero,
-                                padding: HtmlPaddings.zero,
-                                fontSize: FontSize(14),
-                                lineHeight: const LineHeight(1.5))
-                          })))),
-          TextButton.icon(
-              onPressed: () => setState(() => _expanded = !_expanded),
-              icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
-              label: Text(_expanded ? 'Свернуть' : 'Подробнее')),
-        ],
+        else
+          ProductDescription(key: ValueKey(c.description), html: c.description),
       ]),
       const SizedBox(height: 8),
       _section([

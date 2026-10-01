@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../providers/cart_provider.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -550,7 +551,7 @@ class _SectionBlockState extends State<_SectionBlock> {
         final screenW = MediaQuery.of(context).size.width;
         final cardWidth = (screenW - 30) / 2;
         final imageHeight = cardWidth < 190 ? cardWidth * 0.85 : 170.0;
-        final cardH = imageHeight + 212;
+        final cardH = imageHeight + 184;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,14 +734,15 @@ class _ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
+                    SizedBox(
+                      height: 45,
                       child: Text(
                         product.name,
                         style: const TextStyle(
                             fontSize: 12,
                             height: 1.25,
                             color: AppColors.mainText),
-                        maxLines: 4,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -789,6 +791,7 @@ class _ProductCard extends StatelessWidget {
                         color: AppColors.primaryText,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
+                        height: 1.2,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -797,6 +800,13 @@ class _ProductCard extends StatelessWidget {
                       height: 44,
                       child: ElevatedButton(
                         onPressed: () {
+                          if (product.price > 0 && product.canBuy != false) {
+                            context.read<CartProvider>().addItem(product);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Товар добавлен в корзину')));
+                            return;
+                          }
                           Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -811,8 +821,11 @@ class _ProductCard extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(7)),
                         ),
-                        child: const Text('Выбрать вариант',
-                            style: TextStyle(
+                        child: Text(
+                            product.price > 0 && product.canBuy != false
+                                ? 'В корзину'
+                                : 'Под заказ',
+                            style: const TextStyle(
                                 fontSize: 13, fontWeight: FontWeight.w600)),
                       ),
                     ),
