@@ -113,7 +113,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildBottomNav(BuildContext context) {
     const bgColor = Color(0xFF1E1E26);
     const activeColor = AppColors.primaryAccent;
-    const inactiveColor = Color(0xFF6B6B7A);
+    const inactiveColor = Color(0xFFB1B1BC);
 
     return Container(
       decoration: const BoxDecoration(
@@ -129,7 +129,7 @@ class _MainScreenState extends State<MainScreen> {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 48,
+          height: 56,
           child: Row(
             children: [
               // 0 — Главная
@@ -235,15 +235,15 @@ class _TabItem extends StatelessWidget {
               Icon(
                 isActive ? activeIcon : icon,
                 color: isActive ? activeColor : inactiveColor,
-                size: 20,
+                size: 22,
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
                   color: isActive ? activeColor : inactiveColor,
-                  fontSize: 10,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ],
@@ -298,7 +298,7 @@ class _CartTabItem extends StatelessWidget {
                             ? Icons.shopping_bag
                             : Icons.shopping_bag_outlined,
                         color: isActive ? activeColor : inactiveColor,
-                        size: 20,
+                        size: 22,
                       ),
                       if (cart.itemCount > 0)
                         Positioned(
@@ -329,13 +329,13 @@ class _CartTabItem extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 'Корзина',
                 style: TextStyle(
                   color: isActive ? activeColor : inactiveColor,
-                  fontSize: 10,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ],

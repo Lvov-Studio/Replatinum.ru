@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -90,47 +91,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
       appBar: AppBar(
-        backgroundColor: AppColors.darkAccent,
-        foregroundColor: Colors.white,
-        title: Text(
-          widget.productPreview.name,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          Consumer<CartProvider>(
-            builder: (context, cart, _) => Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.shopping_bag_outlined),
-                  tooltip: 'Открыть корзину',
-                  onPressed: _openCart,
-                ),
-                if (cart.itemCount > 0)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                          color: AppColors.primaryAccent,
-                          shape: BoxShape.circle),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text('${cart.itemCount}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+        toolbarHeight: 0,
+        backgroundColor: Colors.white,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
       body: FutureBuilder<ProductDetail>(
         future: _detailFuture,
@@ -222,6 +185,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return hasUpper && hasLower;
   }
 
+  Widget _galleryAction({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.white,
+      elevation: 1,
+      shape: const CircleBorder(),
+      child: IconButton(
+        icon: Icon(icon),
+        color: AppColors.darkAccent,
+        iconSize: 22,
+        tooltip: tooltip,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+      ),
+    );
+  }
+
   Widget _buildContent(ProductDetail detail) {
     // Фото: если выбран оффер с фото — показываем его, иначе галерея товара
     final offerImg = _selectedOffer?.image ?? '';
@@ -273,56 +257,103 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Галерея фото ──────────────────────────────────
-          Container(
-            height: 300,
-            color: Colors.white,
-            child: images.isNotEmpty
-                ? Stack(
+          Stack(
+            children: [
+              Container(
+                height: 300,
+                color: Colors.white,
+                child: images.isNotEmpty
+                    ? Stack(
+                        children: [
+                          PageView.builder(
+                            controller: _pageController,
+                            onPageChanged: (i) =>
+                                setState(() => _currentImageIndex = i),
+                            itemCount: images.length,
+                            itemBuilder: (_, i) => CachedNetworkImage(
+                              imageUrl: images[i],
+                              fit: BoxFit.contain,
+                              placeholder: (_, __) => const Center(
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.primaryAccent)),
+                              errorWidget: (_, __, ___) => const Center(
+                                  child: Icon(Icons.image_outlined,
+                                      size: 80, color: Color(0xFFCCCCCC))),
+                            ),
+                          ),
+                          if (images.length > 1)
+                            Positioned(
+                              bottom: 12,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(
+                                    images.length,
+                                    (i) => Container(
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 3),
+                                          width:
+                                              _currentImageIndex == i ? 20 : 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            color: _currentImageIndex == i
+                                                ? AppColors.primaryAccent
+                                                : const Color(0xFFDDDDDD),
+                                          ),
+                                        )),
+                              ),
+                            ),
+                        ],
+                      )
+                    : const Center(
+                        child: Icon(Icons.image_outlined,
+                            size: 80, color: Color(0xFFCCCCCC))),
+              ),
+              Positioned(
+                top: 8,
+                left: 10,
+                child: _galleryAction(
+                  icon: Icons.arrow_back,
+                  tooltip: 'Назад',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 10,
+                child: Consumer<CartProvider>(
+                  builder: (context, cart, _) => Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (i) =>
-                            setState(() => _currentImageIndex = i),
-                        itemCount: images.length,
-                        itemBuilder: (_, i) => CachedNetworkImage(
-                          imageUrl: images[i],
-                          fit: BoxFit.contain,
-                          placeholder: (_, __) => const Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.primaryAccent)),
-                          errorWidget: (_, __, ___) => const Center(
-                              child: Icon(Icons.image_outlined,
-                                  size: 80, color: Color(0xFFCCCCCC))),
-                        ),
+                      _galleryAction(
+                        icon: Icons.shopping_bag_outlined,
+                        tooltip: 'Открыть корзину',
+                        onPressed: _openCart,
                       ),
-                      if (images.length > 1)
+                      if (cart.itemCount > 0)
                         Positioned(
-                          bottom: 12,
-                          left: 0,
-                          right: 0,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                                images.length,
-                                (i) => Container(
-                                      margin: const EdgeInsets.symmetric(
-                                          horizontal: 3),
-                                      width: _currentImageIndex == i ? 20 : 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(4),
-                                        color: _currentImageIndex == i
-                                            ? AppColors.primaryAccent
-                                            : const Color(0xFFDDDDDD),
-                                      ),
-                                    )),
+                          top: -2,
+                          right: -2,
+                          child: CircleAvatar(
+                            radius: 9,
+                            backgroundColor: AppColors.primaryAccent,
+                            child: Text(
+                              '${cart.itemCount}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                     ],
-                  )
-                : const Center(
-                    child: Icon(Icons.image_outlined,
-                        size: 80, color: Color(0xFFCCCCCC))),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           // ── Название и цена ───────────────────────────────

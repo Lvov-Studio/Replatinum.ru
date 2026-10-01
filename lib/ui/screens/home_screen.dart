@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -190,41 +192,125 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      child: GestureDetector(
-        onTap: () => showSearch(
-          context: context,
-          delegate: ProductSearchDelegate(),
-        ),
-        child: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF4F5F7),
-            border: Border.all(color: const Color(0xFFE8E8E8), width: 1.5),
-            borderRadius: BorderRadius.circular(10),
+      child: Semantics(
+        button: true,
+        label: 'Поиск товаров',
+        child: GestureDetector(
+          onTap: () => showSearch(
+            context: context,
+            delegate: ProductSearchDelegate(),
           ),
-          child: Row(
-            children: [
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('Поиск товаров...',
-                    style: TextStyle(color: Color(0xFF999999), fontSize: 14)),
-              ),
-              Container(
-                width: 42,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryAccent,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(8),
-                    bottomRight: Radius.circular(8),
-                  ),
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F5F7),
+              border: Border.all(color: const Color(0xFFE8E8E8), width: 1.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: ExcludeSemantics(child: _AnimatedSearchHint()),
                 ),
-                child: const Icon(Icons.search, color: Colors.white, size: 20),
-              ),
-            ],
+                Container(
+                  width: 42,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryAccent,
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
+                  ),
+                  child:
+                      const Icon(Icons.search, color: Colors.white, size: 20),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AnimatedSearchHint extends StatefulWidget {
+  const _AnimatedSearchHint();
+
+  @override
+  State<_AnimatedSearchHint> createState() => _AnimatedSearchHintState();
+}
+
+class _AnimatedSearchHintState extends State<_AnimatedSearchHint> {
+  static const _hints = [
+    'Samsung Galaxy Z Fold 8',
+    'Apple iPhone 18 Pro Max',
+    'Apple iPhone Duo',
+    'Apple AirPods 5',
+    'Apple AirPods Max',
+    'Apple Watch Ultra 4',
+    'Apple Watch Series 12',
+    'Sony PlayStation 5',
+    'Marshall',
+    'JBL',
+  ];
+
+  Timer? _timer;
+  int _hintIndex = 0;
+  int _length = 0;
+  bool _deleting = false;
+  bool _animationsDisabled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final disabled = MediaQuery.disableAnimationsOf(context);
+    if (disabled == _animationsDisabled && _timer != null) return;
+    _animationsDisabled = disabled;
+    _timer?.cancel();
+    if (!disabled) _schedule(const Duration(milliseconds: 72));
+  }
+
+  void _schedule(Duration delay) {
+    _timer = Timer(delay, _advance);
+  }
+
+  void _advance() {
+    final hint = _hints[_hintIndex];
+    if (_deleting) {
+      if (_length > 0) {
+        setState(() => _length--);
+        _schedule(const Duration(milliseconds: 36));
+      } else {
+        _deleting = false;
+        _hintIndex = (_hintIndex + 1) % _hints.length;
+        _schedule(const Duration(milliseconds: 300));
+      }
+    } else if (_length < hint.length) {
+      setState(() => _length++);
+      _schedule(const Duration(milliseconds: 72));
+    } else {
+      _deleting = true;
+      _schedule(const Duration(milliseconds: 1600));
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _animationsDisabled
+          ? 'Поиск товаров...'
+          : _hints[_hintIndex].substring(0, _length),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(color: Color(0xFF999999), fontSize: 14),
     );
   }
 }
