@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/cart_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
-import '../widgets/custom_app_bar.dart';
+import '../widgets/empty_cart_view.dart';
 import 'checkout_bottom_sheet.dart';
 import 'main_screen.dart';
 import 'success_screen.dart';
@@ -31,29 +31,22 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Корзина',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.mainText,
+        surfaceTintColor: AppColors.surface,
+        scrolledUnderElevation: 0,
+        shape: const Border(bottom: BorderSide(color: AppColors.border)),
+      ),
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {
           if (cart.items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_cart_outlined,
-                    size: 80,
-                    color: AppColors.secondaryText.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Ваша корзина пуста',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppColors.secondaryText,
-                        ),
-                  ),
-                ],
-              ),
-            );
+            return const EmptyCartView();
           }
 
           final cartItems = cart.items.values.toList();

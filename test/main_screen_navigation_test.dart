@@ -61,7 +61,7 @@ void main() {
       Navigator.of(tester.element(find.text('Избранное'))).pop();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Корзина'));
+      await tester.tap(find.text('Корзина').last);
       await tester.pumpAndSettle();
       expect(find.byType(CartScreen), findsOneWidget);
       expect(MainScreen.currentTabIndex, MainScreen.cartTab);

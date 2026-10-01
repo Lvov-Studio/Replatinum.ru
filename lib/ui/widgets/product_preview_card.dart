@@ -151,8 +151,7 @@ class ProductPreviewCard extends StatelessWidget {
                     width: double.infinity,
                     height: 48,
                     child: Padding(
-                      padding:
-                          EdgeInsets.symmetric(vertical: catalogLayout ? 4 : 0),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       child: ElevatedButton(
                         onPressed: () {
                           if (canBuy) {

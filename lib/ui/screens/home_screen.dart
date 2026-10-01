@@ -12,6 +12,7 @@ import '../../core/theme/app_colors.dart';
 
 import '../widgets/sliver_home_header.dart';
 import '../widgets/home_product_carousel.dart';
+import '../widgets/recent_products_strip.dart';
 import '../widgets/banner_slider.dart';
 import 'product_search_delegate.dart';
 import 'main_screen.dart';
@@ -150,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onRetry: () => _retryProducts('hit'),
                   ),
                   _NewsSection(future: _newsFuture, onRetry: _retryNews),
+                  const RecentProductsStrip(),
                   const SizedBox(height: 24),
                 ],
               ),

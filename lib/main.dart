@@ -5,6 +5,7 @@ import 'providers/category_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/saved_products_provider.dart';
+import 'providers/recent_products_provider.dart';
 import 'ui/screens/main_screen.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => SavedProductsProvider()..load()),
+        ChangeNotifierProvider(create: (_) => RecentProductsProvider()..load()),
       ],
       child: const PlatinumStoreApp(),
     ),

@@ -7,6 +7,7 @@ import '../../data/api/api_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_detail_controller.dart';
 import '../../providers/saved_products_provider.dart';
+import '../../providers/recent_products_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../widgets/product_purchase_sheets.dart';
@@ -47,6 +48,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 _controller.selectedOffer = offer;
               }
             }
+            _recordView();
             setState(() {});
           });
   }
@@ -83,10 +85,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   void _select(String code, String value) {
     _controller.select(code, value);
+    _recordView();
     setState(() {
       _image = 0;
     });
     if (_gallery.hasClients) _gallery.jumpToPage(0);
+  }
+
+  void _recordView() {
+    final c = _controller;
+    if (c.detail == null || c.error != null) return;
+    context.read<RecentProductsProvider?>()?.record(Product(
+          id: c.detail!.id,
+          offerId: c.selectedOffer?.id,
+          name: c.name,
+          price: c.price,
+          storePrice: c.storePrice,
+          canBuy: c.canBuy,
+          image:
+              c.images.isEmpty ? widget.productPreview.image : c.images.first,
+          ruStoreWarning: c.detail!.ruStoreWarning,
+        ));
   }
 
   Future<void> _zoom() async {
