@@ -393,29 +393,30 @@ class _NewsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Широкое превью, как в мобильной ленте сайта.
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              child: AspectRatio(
-                aspectRatio: 2.1,
-                child: item.image.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: item.image,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.centerLeft,
-                        errorWidget: (_, __, ___) => Container(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: 2.1,
+                  child: item.image.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: item.image,
+                          fit: BoxFit.contain,
+                          errorWidget: (_, __, ___) => Container(
+                            color: const Color(0xFFF0F0F0),
+                            child: const Center(
+                                child: Icon(Icons.article_outlined,
+                                    size: 48, color: Color(0xFFCCCCCC))),
+                          ),
+                        )
+                      : Container(
                           color: const Color(0xFFF0F0F0),
                           child: const Center(
                               child: Icon(Icons.article_outlined,
                                   size: 48, color: Color(0xFFCCCCCC))),
                         ),
-                      )
-                    : Container(
-                        color: const Color(0xFFF0F0F0),
-                        child: const Center(
-                            child: Icon(Icons.article_outlined,
-                                size: 48, color: Color(0xFFCCCCCC))),
-                      ),
+                ),
               ),
             ),
             Expanded(
@@ -451,14 +452,13 @@ class _NewsCard extends StatelessWidget {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis),
                     const Spacer(),
-                    const Divider(height: 1),
                     const SizedBox(height: 6),
                     // Читать
                     Text('Читать',
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.primaryAccent)),
+                            color: AppColors.primaryText)),
                   ],
                 ),
               ),
