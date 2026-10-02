@@ -68,11 +68,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _purchase() async {
     if (_controller.action != PurchaseAction.cart) {
-      await showProductInformation(
-          context,
-          _controller.actionLabel,
-          ProductInquiryForm(
-              productId: _controller.id, productName: _controller.name));
+      await showProductOrderSheet(context,
+          productId: _controller.id,
+          productName: _controller.name,
+          productImage: _controller.images.isEmpty
+              ? widget.productPreview.image
+              : _controller.images.first,
+          apiService: widget.apiService);
       return;
     }
     context

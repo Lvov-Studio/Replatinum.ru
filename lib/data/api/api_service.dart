@@ -12,13 +12,14 @@ class ApiService {
 
   static const String baseUrl = 'https://replatinum.ru/local/api/mobile/v1/';
 
-  ApiService() {
-    _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      responseType: ResponseType.json,
-    ));
+  ApiService({Dio? client}) {
+    _dio = client ??
+        Dio(BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          responseType: ResponseType.json,
+        ));
 
     // Добавляем Interceptors для логов и (в будущем) для токенов
     _dio.interceptors.add(InterceptorsWrapper(
