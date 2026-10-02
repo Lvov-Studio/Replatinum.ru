@@ -14,6 +14,7 @@ import 'package:platinumstore_app/ui/widgets/catalog_products_view.dart';
 import 'package:platinumstore_app/ui/widgets/catalog_filter_sheet.dart';
 
 class SectionApi extends ApiService {
+  SectionApi() : super(useCompactCatalog: false);
   final offsets = <int>[];
   @override
   Future<Map<String, dynamic>> getProducts(
@@ -65,11 +66,15 @@ class RacingApi extends ApiService {
   final pending = <String, Completer<List<CatalogItem>>>{};
   @override
   Future<List<CatalogItem>> getCatalogItems(
-          {String? categoryId, String? type, bool Function()? isCurrent}) =>
+          {String? categoryId,
+          String? type,
+          bool Function()? isCurrent,
+          void Function(List<CatalogItem>)? onProgress}) =>
       (pending[categoryId!] = Completer<List<CatalogItem>>()).future;
 }
 
 class IncompleteApi extends ApiService {
+  IncompleteApi() : super(useCompactCatalog: false);
   @override
   Future<Map<String, dynamic>> getProducts(
           {String? categoryId,
@@ -80,34 +85,164 @@ class IncompleteApi extends ApiService {
 }
 
 class NavigationApi extends ApiService {
+  int requests = 0;
   @override
   Future<List<CatalogItem>> getCatalogItems(
-          {String? categoryId,
-          String? type,
-          bool Function()? isCurrent}) async =>
-      [
-        CatalogItem(
-            Product(
-                id: 'apple',
-                offerId: 'a',
-                name: 'iPhone 18 Pro',
-                price: 100,
-                image: ''),
-            {},
-            path: '/catalog/smartfony/iphone/iphone-18-pro/phone/'),
-        CatalogItem(
-            Product(
-                id: 'samsung',
-                offerId: 's',
-                name: 'Samsung Galaxy S',
-                price: 200,
-                image: ''),
-            {},
-            path: '/catalog/smartfony/samsung/galaxy_s/phone/'),
-      ];
+      {String? categoryId,
+      String? type,
+      bool Function()? isCurrent,
+      void Function(List<CatalogItem>)? onProgress}) async {
+    requests++;
+    return [
+      CatalogItem(
+          Product(
+              id: 'apple',
+              offerId: 'a',
+              name: 'iPhone 18 Pro',
+              price: 100,
+              image: ''),
+          {},
+          path: '/catalog/smartfony/iphone/iphone-18-pro/phone/'),
+      CatalogItem(
+          Product(
+              id: 'samsung',
+              offerId: 's',
+              name: 'Samsung Galaxy S',
+              price: 200,
+              image: ''),
+          {},
+          path: '/catalog/smartfony/samsung/galaxy_s/phone/'),
+    ];
+  }
+}
+
+class SlowSectionApi extends SectionApi {
+  final remaining = Completer<void>();
+  bool fail = false;
+  @override
+  Future<ProductDetail> getProductDetail(String id) async {
+    if (int.parse(id) >= 4) await remaining.future;
+    if (fail) throw StateError('Detail unavailable');
+    return super.getProductDetail(id);
+  }
 }
 
 void main() {
+  group('Progressive catalog loading', () {
+    test('should expose real SKUs before remaining details and defer facets',
+        () async {
+      final api = SlowSectionApi();
+      final provider = ProductProvider(apiService: api);
+      addTearDown(provider.dispose);
+      final loading = provider.fetchProducts(
+          category: Category(id: '83', name: 'Phones', image: ''));
+      await Future<void>.delayed(Duration.zero);
+      expect(provider.isLoading, true);
+      expect(provider.sectionTotal, 8);
+      expect(provider.products.first.offerId, '0-0');
+      expect(provider.facets, isEmpty);
+      api.remaining.complete();
+      await loading;
+      expect(provider.sectionTotal, 102);
+      expect(provider.facets, isNotEmpty);
+    });
+    test(
+        'should discard partial results on a later failure and avoid caching them',
+        () async {
+      final api = SlowSectionApi();
+      final provider = ProductProvider(apiService: api);
+      addTearDown(provider.dispose);
+      final category = Category(id: '83', name: 'Phones', image: '');
+      final loading = provider.fetchProducts(category: category);
+      await Future<void>.delayed(Duration.zero);
+      expect(provider.sectionTotal, 8);
+      api.fail = true;
+      api.remaining.complete();
+      await loading;
+      expect(provider.error, isNotEmpty);
+      expect(provider.sectionTotal, 0);
+      api.fail = false;
+      await provider.fetchProducts(category: category);
+      expect(provider.sectionTotal, 102);
+      expect(api.offsets, [0, 0, 50]);
+    });
+    test('should reuse complete sections, force refresh and expire the cache',
+        () async {
+      var now = DateTime(2026, 10, 2);
+      final api = NavigationApi();
+      final provider = ProductProvider(apiService: api, now: () => now);
+      addTearDown(provider.dispose);
+      final category =
+          Category(id: '83', code: 'smartfony', name: 'Phones', image: '');
+      await provider.fetchProducts(category: category);
+      provider.clearCategory();
+      await provider.fetchProducts(category: category);
+      expect(api.requests, 1);
+      expect(provider.sectionTotal, 2);
+      await provider.retry();
+      expect(api.requests, 2);
+      now = now.add(const Duration(minutes: 3));
+      await provider.fetchProducts(category: category);
+      expect(api.requests, 3);
+    });
+    test(
+        'should show subsection navigation before details and ignore cancelled progress',
+        () async {
+      final api = SlowSectionApi();
+      final provider = ProductProvider(apiService: api);
+      addTearDown(provider.dispose);
+      final loading = provider.fetchProducts(
+          category:
+              Category(id: '83', code: 'smartfony', name: 'Phones', image: ''));
+      expect(provider.browsing, true);
+      expect(provider.subsections, isNotEmpty);
+      expect(provider.imageOf(provider.subsections.first), isEmpty);
+      await Future<void>.delayed(Duration.zero);
+      provider.clearCategory();
+      api.remaining.complete();
+      await loading;
+      expect(provider.sectionTotal, 0);
+      expect(provider.selectedCategory, null);
+      expect(provider.isLoading, false);
+    });
+  });
+  testWidgets(
+      'should keep navigation and loaded products visible during background loading',
+      (tester) async {
+    final api = SlowSectionApi();
+    final provider = ProductProvider(apiService: api);
+    final saved = SavedProductsProvider()..ready = true;
+    addTearDown(provider.dispose);
+    addTearDown(saved.dispose);
+    final loading = provider.fetchProducts(
+        category:
+            Category(id: '83', code: 'smartfony', name: 'Phones', image: ''));
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: provider),
+          ChangeNotifierProvider.value(value: saved),
+        ],
+        child: MaterialApp(
+            home: Scaffold(
+                body: Consumer<ProductProvider>(
+                    builder: (_, p, child) =>
+                        CatalogProductsView(provider: p))))));
+    await tester.pump();
+    expect(find.text('iPhone'), findsOneWidget);
+    expect(find.byTooltip('Обновить товары'), findsOneWidget);
+    await tester.tap(find.text('Смотреть все'));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('preview-image-0-0')), findsOneWidget);
+    expect(find.text('Загружаем товары и фильтры…'), findsNothing);
+    expect(find.text('Фильтры'), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    api.remaining.complete();
+    await loading;
+    await tester.pump();
+    expect(find.text('Фильтры'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   test(
       'Subsections use website paths, hide empty branches and preserve back navigation',
       () async {

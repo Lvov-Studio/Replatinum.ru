@@ -3,11 +3,14 @@ import 'dart:async';
 import '../../data/api/api_service.dart';
 import '../../data/models/product_model.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/price_formatter.dart';
 import 'product_detail_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductSearchDelegate extends SearchDelegate<Product?> {
-  final ApiService _apiService = ApiService();
+  ProductSearchDelegate({ApiService? apiService})
+      : _apiService = apiService ?? ApiService();
+  final ApiService _apiService;
 
   @override
   String get searchFieldLabel => 'Поиск товаров...';
@@ -76,13 +79,16 @@ class _DebouncedSearchSuggestions extends StatefulWidget {
   final String query;
   final ApiService apiService;
 
-  const _DebouncedSearchSuggestions({required this.query, required this.apiService});
+  const _DebouncedSearchSuggestions(
+      {required this.query, required this.apiService});
 
   @override
-  State<_DebouncedSearchSuggestions> createState() => _DebouncedSearchSuggestionsState();
+  State<_DebouncedSearchSuggestions> createState() =>
+      _DebouncedSearchSuggestionsState();
 }
 
-class _DebouncedSearchSuggestionsState extends State<_DebouncedSearchSuggestions> {
+class _DebouncedSearchSuggestionsState
+    extends State<_DebouncedSearchSuggestions> {
   Timer? _debounce;
   Future<List<Product>>? _future;
 
@@ -101,11 +107,14 @@ class _DebouncedSearchSuggestionsState extends State<_DebouncedSearchSuggestions
   }
 
   void _search() {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
+    _debounce?.cancel();
+    _future = null;
+    if (widget.query.trim().length < 2) return;
+    final query = widget.query;
+    _debounce = Timer(const Duration(milliseconds: 350), () {
       if (mounted) {
         setState(() {
-          _future = widget.apiService.searchProducts(widget.query);
+          _future = widget.apiService.searchProducts(query);
         });
       }
     });
@@ -119,6 +128,9 @@ class _DebouncedSearchSuggestionsState extends State<_DebouncedSearchSuggestions
 
   @override
   Widget build(BuildContext context) {
+    if (widget.query.trim().length < 2) {
+      return const Center(child: Text('Введите минимум 2 символа для поиска'));
+    }
     if (_future == null) {
       // Пока ждем дебаунса
       return const Center(child: CircularProgressIndicator());
@@ -132,7 +144,13 @@ class _DebouncedSearchSuggestionsState extends State<_DebouncedSearchSuggestions
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text('Ошибка поиска: ${snapshot.error}'));
+          return Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Не удалось загрузить результаты'),
+            TextButton(
+                onPressed: () => setState(_search),
+                child: const Text('Повторить')),
+          ]));
         }
 
         final results = snapshot.data ?? [];
@@ -143,7 +161,8 @@ class _DebouncedSearchSuggestionsState extends State<_DebouncedSearchSuggestions
 
         return ListView.separated(
           itemCount: results.length,
-          separatorBuilder: (context, index) => const Divider(),
+          separatorBuilder: (context, index) =>
+              const Divider(height: 1, color: AppColors.border),
           itemBuilder: (context, index) {
             final product = results[index];
             return ListTile(
@@ -158,16 +177,18 @@ class _DebouncedSearchSuggestionsState extends State<_DebouncedSearchSuggestions
                 child: product.image.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: product.image,
-                        fit: BoxFit.cover,
-                        errorWidget: (context, url, error) => const Icon(Icons.image_not_supported),
+                        fit: BoxFit.contain,
+                        errorWidget: (context, url, error) =>
+                            const Icon(Icons.image_not_supported),
                       )
                     : const Icon(Icons.image),
               ),
-              title: Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+              title: Text(product.name,
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(
-                '${product.price} ₽',
+                product.price > 0 ? formatPrice(product.price) : 'Под заказ',
                 style: const TextStyle(
-                  color: AppColors.primaryAccent,
+                  color: AppColors.primaryText,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -175,7 +196,11 @@ class _DebouncedSearchSuggestionsState extends State<_DebouncedSearchSuggestions
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProductDetailScreen(productPreview: product),
+                    builder: (context) => ProductDetailScreen(
+                        productPreview: product,
+                        initialOfferId: product.offerId,
+                        matchPreviewPrice: true,
+                        apiService: widget.apiService),
                   ),
                 );
               },

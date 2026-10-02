@@ -6,17 +6,22 @@ import '../data/models/category_model.dart';
 import '../data/models/catalog_filter.dart';
 
 class ProductProvider extends ChangeNotifier {
-  ProductProvider({ApiService? apiService})
-      : _apiService = apiService ?? ApiService();
+  ProductProvider({ApiService? apiService, DateTime Function()? now})
+      : _apiService = apiService ?? ApiService(),
+        _now = now ?? DateTime.now;
   final ApiService _apiService;
+  final DateTime Function() _now;
+  final _sections = <(String?, String?), (DateTime, List<CatalogItem>)>{};
+  static const cacheLifetime = Duration(minutes: 2);
   List<CatalogItem> _items = [];
   String? _path;
   String? _subsectionTitle;
   bool _browsing = true;
   List<CatalogNode> get subsections =>
       (catalogNavigation[_selectedCategory?.code] ?? [])
-          .where(
-              (node) => _items.any((item) => item.path.startsWith(node.path)))
+          .where((node) =>
+              _isLoading ||
+              _items.any((item) => item.path.startsWith(node.path)))
           .toList();
   bool get browsing => _browsing && subsections.isNotEmpty;
   String get sectionTitle =>
@@ -31,12 +36,16 @@ class ProductProvider extends ChangeNotifier {
   Iterable<CatalogItem> get _baseItems =>
       _items.where((item) => _path == null || item.path.startsWith(_path!));
   List<CatalogNode> childrenOf(CatalogNode node) => node.children
-      .where((child) => _items.any((item) => item.path.startsWith(child.path)))
+      .where((child) =>
+          _isLoading || _items.any((item) => item.path.startsWith(child.path)))
       .toList();
-  String imageOf(CatalogNode node) => _items
-      .firstWhere((item) => item.path.startsWith(node.path))
-      .product
-      .image;
+  String imageOf(CatalogNode node) {
+    for (final item in _items) {
+      if (item.path.startsWith(node.path)) return item.product.image;
+    }
+    return '';
+  }
+
   void openSubsection([CatalogNode? node]) {
     _path = node?.path;
     _subsectionTitle = node?.title;
@@ -99,6 +108,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Map<String, (String, List<String>)> get facets {
+    if (_isLoading || _error.isNotEmpty) return {};
     final labels = <String, String>{};
     final values = <String, Set<String>>{};
     for (final item in _baseItems) {
@@ -162,7 +172,8 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchProducts({Category? category, String? type}) async {
+  Future<void> fetchProducts(
+      {Category? category, String? type, bool force = false}) async {
     final requestId = ++_requestId;
     _isLoading = true;
     _error = '';
@@ -175,16 +186,35 @@ class ProductProvider extends ChangeNotifier {
     _filters = const CatalogFilters();
     _sort = CatalogSort.original;
     _visible = 20;
+    final key = (category?.id, type);
+    final cached = _sections[key];
+    if (!force &&
+        cached != null &&
+        _now().difference(cached.$1) < cacheLifetime) {
+      _items = cached.$2;
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+    _sections.remove(key);
     notifyListeners();
     try {
       final items = await _apiService.getCatalogItems(
           categoryId: category?.id,
           type: type,
-          isCurrent: () => requestId == _requestId);
+          isCurrent: () => requestId == _requestId,
+          onProgress: (items) {
+            if (requestId != _requestId) return;
+            _items = items;
+            notifyListeners();
+          });
       if (requestId != _requestId) return;
       _items = items;
+      _sections[key] = (_now(), List.unmodifiable(items));
+      if (_sections.length > 4) _sections.remove(_sections.keys.first);
     } catch (_) {
       if (requestId != _requestId) return;
+      _items = [];
       _error = 'Не удалось загрузить товары и фильтры';
     } finally {
       if (requestId == _requestId) {
@@ -195,7 +225,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<void> retry() =>
-      fetchProducts(category: _selectedCategory, type: _type);
+      fetchProducts(category: _selectedCategory, type: _type, force: true);
   Future<void> loadMore() async {
     _visible += 20;
     notifyListeners();

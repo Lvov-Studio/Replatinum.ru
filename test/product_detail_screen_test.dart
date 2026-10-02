@@ -8,7 +8,7 @@ import 'package:platinumstore_app/data/models/product_model.dart';
 import 'package:platinumstore_app/providers/cart_provider.dart';
 import 'package:platinumstore_app/providers/saved_products_provider.dart';
 import 'package:platinumstore_app/ui/screens/product_detail_screen.dart';
-import 'package:platinumstore_app/ui/widgets/product_purchase_sheets.dart';
+import 'package:platinumstore_app/ui/widgets/product_credit_sheet.dart';
 
 class ScreenApi extends ApiService {
   @override
@@ -45,8 +45,60 @@ class ScreenApi extends ApiService {
           ]);
 }
 
+class SearchPriceApi extends ApiService {
+  @override
+  Future<ProductDetail> getProductDetail(String id) async =>
+      const ProductDetail(
+          id: 'parent',
+          name: 'Phone',
+          price: 0,
+          description: '',
+          images: [],
+          offers: [
+            Offer(
+                id: 'expensive',
+                name: 'Phone expensive',
+                image: '',
+                price: 200,
+                properties: []),
+            Offer(
+                id: 'matching',
+                name: 'Phone matching',
+                image: '',
+                price: 100,
+                properties: []),
+          ]);
+}
+
 void main() {
   group('ProductDetailScreen', () {
+    testWidgets(
+        'search opens the priced variant; exact SKU wins over a price match',
+        (tester) async {
+      for (final (offerId, expectedName) in [
+        ('parent', 'Phone matching'),
+        ('expensive', 'Phone expensive')
+      ]) {
+        await tester.pumpWidget(MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => CartProvider()),
+              ChangeNotifierProvider(
+                  create: (_) => SavedProductsProvider()..ready = true),
+            ],
+            child: MaterialApp(
+                home: ProductDetailScreen(
+              key: ValueKey(offerId),
+              productPreview:
+                  Product(id: 'parent', name: 'Phone', price: 100, image: ''),
+              initialOfferId: offerId,
+              matchPreviewPrice: true,
+              apiService: SearchPriceApi(),
+            ))));
+        await tester.pumpAndSettle();
+        expect(find.text(expectedName), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    });
     for (final (width, scale) in [
       (320.0, 1.0),
       (320.0, 1.3),
@@ -74,17 +126,17 @@ void main() {
                         Product(id: '1', name: 'Phone', price: 100, image: ''),
                     apiService: ScreenApi()))));
         await tester.pumpAndSettle();
-        expect(find.text(formatPrice(120)), findsNWidgets(2));
+        expect(find.textContaining(formatPrice(120)), findsNWidgets(2));
         final installment = find.text('Рассрочка от ${formatPrice(5)}/мес.');
         await tester.ensureVisible(installment);
         await tester.pumpAndSettle();
         await tester.tap(installment);
         await tester.pumpAndSettle();
-        expect(find.byType(InstallmentCalculator), findsOneWidget);
+        expect(find.byType(ProductCreditSheet), findsOneWidget);
         await tester.tap(find.text('12 мес.'));
         await tester.pumpAndSettle();
         expect(find.text('${formatPrice(10)}/мес.'), findsOneWidget);
-        Navigator.of(tester.element(find.byType(InstallmentCalculator))).pop();
+        Navigator.of(tester.element(find.byType(ProductCreditSheet))).pop();
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(find.text('512 ГБ'), -180,
             scrollable: find.byType(Scrollable).first);
@@ -93,7 +145,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('512 ГБ'));
         await tester.pumpAndSettle();
-        expect(find.text('Цена по запросу'), findsWidgets);
+        expect(find.text('Цена по запросу'), findsNothing);
         expect(find.text('Под заказ'), findsWidgets);
         expect(find.text(formatPrice(100)), findsNothing);
         expect(tester.takeException(), isNull);

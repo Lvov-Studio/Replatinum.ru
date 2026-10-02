@@ -9,10 +9,12 @@ import '../models/catalog_filter.dart';
 
 class ApiService {
   late final Dio _dio;
+  bool _compactCatalogEnabled;
 
   static const String baseUrl = 'https://replatinum.ru/local/api/mobile/v1/';
 
-  ApiService({Dio? client}) {
+  ApiService({Dio? client, bool useCompactCatalog = true})
+      : _compactCatalogEnabled = useCompactCatalog {
     _dio = client ??
         Dio(BaseOptions(
           baseUrl: baseUrl,
@@ -94,8 +96,19 @@ class ApiService {
 
   /// Complete section snapshot: facets must include variants beyond page one.
   Future<List<CatalogItem>> getCatalogItems(
-      {String? categoryId, String? type, bool Function()? isCurrent}) async {
-    final parents = <Product>[];
+      {String? categoryId,
+      String? type,
+      bool Function()? isCurrent,
+      void Function(List<CatalogItem>)? onProgress}) async {
+    if (_compactCatalogEnabled) {
+      final compact = await _getCompactCatalogItems(
+          categoryId: categoryId,
+          type: type,
+          isCurrent: isCurrent,
+          onProgress: onProgress);
+      if (compact != null) return compact;
+    }
+    final result = <String, CatalogItem>{};
     var offset = 0;
     while (true) {
       if (isCurrent?.call() == false) return [];
@@ -105,67 +118,168 @@ class ApiService {
       if (items.isEmpty && offset < (page['total'] as num)) {
         throw StateError('Incomplete catalog response');
       }
-      parents.addAll(items);
+      for (var start = 0; start < items.length; start += 4) {
+        if (isCurrent?.call() == false) return [];
+        // Keep four requests in flight; publish each completed batch immediately.
+        final batch = items.skip(start).take(4);
+        final groups = await Future.wait(batch.map((parent) async {
+          final detail = await getProductDetail(parent.id);
+          Map<String, CatalogAttribute> attributes(
+                  List<ProductSpec> specs, String scope) =>
+              {
+                for (final spec in specs)
+                  if (spec.value.trim().isNotEmpty &&
+                      spec.name.trim().isNotEmpty)
+                    '$scope:${spec.code.isEmpty ? '${spec.group}:${spec.name}' : spec.code}':
+                        CatalogAttribute(spec.name, spec.value.trim()),
+              };
+          final modelAttributes = attributes(detail.specs, 'model');
+          final preview = parent.copyWith(
+              ruStoreWarning: parent.ruStoreWarning || detail.ruStoreWarning);
+          if (detail.offers.isNotEmpty) {
+            final orderedOffers = [
+              ...detail.offers.where((o) => o.price > 0 && o.canBuy == true),
+              ...detail.offers.where((o) => o.price > 0 && o.canBuy != true),
+              ...detail.offers.where((o) => o.price <= 0),
+            ];
+            return [
+              for (final offer in orderedOffers)
+                if (parent.offerId == null || parent.offerId == offer.id)
+                  CatalogItem(
+                      _offerPreview(preview, offer),
+                      {
+                        ...modelAttributes,
+                        ...attributes(offer.specs, 'offer'),
+                      },
+                      path: Uri.tryParse(detail.url)?.path ?? '')
+            ];
+          }
+          return [
+            CatalogItem(
+                Product(
+                    id: parent.id,
+                    name: detail.name,
+                    price: detail.price,
+                    storePrice: detail.storePrice,
+                    canBuy: detail.canBuy,
+                    image: detail.images.isEmpty
+                        ? parent.image
+                        : detail.images.first,
+                    ruStoreWarning: preview.ruStoreWarning,
+                    specs: detail.specs),
+                modelAttributes,
+                path: Uri.tryParse(detail.url)?.path ?? '')
+          ];
+        }));
+        for (final item in groups.expand((group) => group)) {
+          result['${item.product.id}:${item.product.offerId ?? 'base'}'] = item;
+        }
+        if (isCurrent?.call() == false) return [];
+        onProgress?.call(List.unmodifiable(result.values));
+      }
       offset += items.length;
       if (offset >= (page['total'] as num)) break;
     }
-    final result = <String, CatalogItem>{};
-    for (var start = 0; start < parents.length; start += 4) {
-      if (isCurrent?.call() == false) return [];
-      final batch = parents.skip(start).take(4);
-      final groups = await Future.wait(batch.map((parent) async {
-        final detail = await getProductDetail(parent.id);
-        Map<String, CatalogAttribute> attributes(
-                List<ProductSpec> specs, String scope) =>
-            {
-              for (final spec in specs)
-                if (spec.value.trim().isNotEmpty && spec.name.trim().isNotEmpty)
-                  '$scope:${spec.code.isEmpty ? '${spec.group}:${spec.name}' : spec.code}':
-                      CatalogAttribute(spec.name, spec.value.trim()),
-            };
-        final modelAttributes = attributes(detail.specs, 'model');
-        final preview = parent.copyWith(
-            ruStoreWarning: parent.ruStoreWarning || detail.ruStoreWarning);
-        if (detail.offers.isNotEmpty) {
-          final orderedOffers = [
-            ...detail.offers.where((o) => o.price > 0 && o.canBuy == true),
-            ...detail.offers.where((o) => o.price > 0 && o.canBuy != true),
-            ...detail.offers.where((o) => o.price <= 0),
-          ];
-          return [
-            for (final offer in orderedOffers)
-              if (parent.offerId == null || parent.offerId == offer.id)
-                CatalogItem(
-                    _offerPreview(preview, offer),
-                    {
-                      ...modelAttributes,
-                      ...attributes(offer.specs, 'offer'),
-                    },
-                    path: Uri.tryParse(detail.url)?.path ?? '')
-          ];
-        }
-        return [
-          CatalogItem(
-              Product(
-                  id: parent.id,
-                  name: detail.name,
-                  price: detail.price,
-                  storePrice: detail.storePrice,
-                  canBuy: detail.canBuy,
-                  image: detail.images.isEmpty
-                      ? parent.image
-                      : detail.images.first,
-                  ruStoreWarning: preview.ruStoreWarning,
-                  specs: detail.specs),
-              modelAttributes,
-              path: Uri.tryParse(detail.url)?.path ?? '')
-        ];
-      }));
-      for (final item in groups.expand((group) => group)) {
-        result['${item.product.id}:${item.product.offerId ?? 'base'}'] = item;
-      }
-    }
     return result.values.toList();
+  }
+
+  Future<List<CatalogItem>?> _getCompactCatalogItems({
+    String? categoryId,
+    String? type,
+    bool Function()? isCurrent,
+    void Function(List<CatalogItem>)? onProgress,
+  }) async {
+    var offset = 0;
+    int? expectedTotal;
+    final result = <String, CatalogItem>{};
+    while (true) {
+      if (isCurrent?.call() == false) return [];
+      final params = <String, dynamic>{'limit': 8, 'offset': offset};
+      if (categoryId != null) params['section_id'] = categoryId;
+      if (type != null) params['type'] = type;
+      final Response<dynamic> response;
+      try {
+        response = await _dio.get('get_catalog.php', queryParameters: params);
+      } on DioException catch (e) {
+        // Only absence on the first page means an older server. Other errors
+        // must remain visible rather than triggering another large download.
+        if (offset == 0 && e.response?.statusCode == 404) {
+          _compactCatalogEnabled = false;
+          return null;
+        }
+        rethrow;
+      }
+      if (isCurrent?.call() == false) return [];
+      final json = response.data;
+      if (response.statusCode != 200 ||
+          json is! Map ||
+          json['status'] != 'success' ||
+          json['schema_version'] != 1 ||
+          json['data'] is! List ||
+          json['total_models'] is! int ||
+          json['next_offset'] is! int ||
+          json['complete'] is! bool) {
+        throw const FormatException('Invalid compact catalog response');
+      }
+      final total = json['total_models'] as int;
+      final next = json['next_offset'] as int;
+      final complete = json['complete'] as bool;
+      if (total < 0 ||
+          next < offset ||
+          next > total ||
+          next > offset + 8 ||
+          (expectedTotal != null && total != expectedTotal) ||
+          (complete != (next == total)) ||
+          (!complete && next != offset + 8) ||
+          (next > offset && (json['data'] as List).isEmpty)) {
+        throw const FormatException('Incomplete compact catalog page');
+      }
+      expectedTotal = total;
+      final pageModels = <String>{};
+      Map<String, CatalogAttribute> attributes(
+              List<ProductSpec> specs, String scope) =>
+          {
+            for (final spec in specs)
+              if (spec.value.trim().isNotEmpty && spec.name.trim().isNotEmpty)
+                '$scope:${spec.code.isEmpty ? '${spec.group}:${spec.name}' : spec.code}':
+                    CatalogAttribute(spec.name, spec.value.trim()),
+          };
+      for (final row in json['data'] as List) {
+        final data = Map<String, dynamic>.from(row as Map);
+        final product = Product.fromJson(data);
+        pageModels.add(product.id);
+        if (product.id.isEmpty ||
+            data['path'] is! String ||
+            !(data['path'] as String).startsWith('/catalog/') ||
+            data['specs'] is! List ||
+            data['model_specs'] is! List ||
+            data['price'] is! num ||
+            data['store_price'] is! num ||
+            data['can_buy'] is! bool) {
+          throw const FormatException('Invalid compact catalog item');
+        }
+        final modelSpecs = parseSpecs(data['model_specs']);
+        final item = CatalogItem(
+            product,
+            {
+              ...attributes(modelSpecs, 'model'),
+              if (product.offerId != null)
+                ...attributes(product.specs, 'offer'),
+            },
+            path: data['path'] as String);
+        final key = '${product.id}:${product.offerId ?? 'base'}';
+        if (result.containsKey(key)) {
+          throw const FormatException('Duplicate catalog item');
+        }
+        result[key] = item;
+      }
+      if (pageModels.length != next - offset) {
+        throw const FormatException('Missing catalog models');
+      }
+      onProgress?.call(List.unmodifiable(result.values));
+      if (complete) return result.values.toList();
+      offset = next;
+    }
   }
 
   Future<List<Product>> getHomeProducts(String type) async {
@@ -266,6 +380,36 @@ class ApiService {
     }
   }
 
+  Future<void> submitCreditInquiry({
+    required String productId,
+    required String productName,
+    required String productUrl,
+    required num price,
+    required int months,
+    required String name,
+    required String phone,
+  }) async {
+    final response = await _dio.post(
+      'https://replatinum.ru/local/ajax/credit_order.php',
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+      data: {
+        'productId': int.tryParse(productId),
+        'productTitle': productName,
+        'productUrl': productUrl,
+        'productPrice': price,
+        'creditPeriod': months,
+        'purchasePlace': 'store',
+        'firstName': name,
+        'phone': phone,
+      },
+    );
+    if (response.statusCode != 200 ||
+        response.data is! Map ||
+        response.data['success'] != true) {
+      throw const FormatException('Credit inquiry was not accepted');
+    }
+  }
+
   Future<CartQuote> quoteCart(List<Map<String, dynamic>> items) async {
     final response = await _dio.post('quote_cart.php', data: {'items': items});
     if (response.data is! Map || response.data['status'] != 'success') {
@@ -305,26 +449,70 @@ class ApiService {
   }
 
   Future<List<Product>> searchProducts(String query) async {
-    try {
-      final response =
-          await _dio.get('search.php', queryParameters: {'q': query});
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = response.data;
-        if (jsonResponse['status'] == 'success' &&
-            jsonResponse['data'] != null) {
-          final List<dynamic> data = jsonResponse['data'];
-          return data.map((json) => Product.fromJson(json)).toList();
-        } else {
-          throw Exception('Invalid response format or status');
-        }
-      } else {
-        throw Exception('Failed to search products');
-      }
-    } catch (e) {
-      throw Exception('Error searching products: $e');
+    final input = query.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (input.length < 2) return [];
+    // Share the storefront's synonyms, SKU prices and resized thumbnails.
+    final response = await _dio.get(
+        Uri.parse(baseUrl).resolve('/local/ajax/search.php').toString(),
+        queryParameters: {'q': input});
+    final payload = response.data;
+    if (response.statusCode != 200 ||
+        payload is! Map ||
+        payload['status'] != 'success' ||
+        payload['results'] is! List) {
+      throw const FormatException('Invalid search response');
     }
+    final terms = _searchWords('${payload['corrected_query'] ?? input}');
+    final products = <Product>[];
+    final seen = <String>{};
+    for (final raw in payload['results'] as List) {
+      if (raw is! Map) throw const FormatException('Invalid search item');
+      final id = '${raw['id'] ?? ''}';
+      final name = '${raw['name'] ?? ''}';
+      if (id.isEmpty || name.isEmpty || !seen.add(id)) continue;
+      final words = _searchWords(name);
+      // A model number is a word: searching 17 must not match HD17 or 117.
+      if (terms.any(
+          (term) => RegExp(r'^\d+$').hasMatch(term) && !words.contains(term))) {
+        continue;
+      }
+      final price = raw['price'] is num
+          ? raw['price'] as num
+          : num.tryParse('${raw['price'] ?? ''}'
+                  .replaceAll(RegExp(r'[\s\u00a0\u202f₽]'), '')
+                  .replaceAll(',', '.')) ??
+              0;
+      final image = '${raw['image'] ?? ''}';
+      final uri = Uri.tryParse(image);
+      products.add(Product(
+          id: id,
+          offerId: id,
+          name: name,
+          price: price > 0 ? price : 0,
+          image: image.isEmpty || uri == null
+              ? ''
+              : Uri.parse(baseUrl).resolveUri(uri).toString()));
+    }
+    int rank(Product product) {
+      final words = _searchWords(product.name);
+      final joined = words.join(' ');
+      final phrase = terms.join(' ');
+      return (phrase.isNotEmpty && joined.contains(phrase) ? 100 : 0) +
+          terms.where((term) => words.contains(term)).length * 10;
+    }
+
+    final order = {for (var i = 0; i < products.length; i++) products[i].id: i};
+    products.sort((a, b) {
+      final relevance = rank(b).compareTo(rank(a));
+      return relevance != 0 ? relevance : order[a.id]!.compareTo(order[b.id]!);
+    });
+    return products;
   }
+
+  static List<String> _searchWords(String value) => RegExp(r'[a-zа-яё0-9]+')
+      .allMatches(value.toLowerCase().replaceAll('ё', 'е'))
+      .map((match) => match.group(0)!)
+      .toList();
 
   Future<List<BannerModel>> getBanners() async {
     try {

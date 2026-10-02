@@ -1,3 +1,5 @@
+import '../widgets/buyer_hero.dart';
+import '../widgets/buyer_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
@@ -12,19 +14,18 @@ class DeliveryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        backgroundColor: AppColors.darkAccent,
-        foregroundColor: Colors.white,
-        title: const Text('Доставка', style: TextStyle(fontWeight: FontWeight.w600)),
-      ),
+      appBar: buyerAppBar(context, 'Доставка'),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
           // HERO
           _HeroBlock(
-            icon: Icons.local_shipping_rounded,
-            title: 'Быстрая доставка\nпо городу',
-            subtitle: 'Оперативно, безопасно и удобно — прямо до согласованного места',
-            chips: const ['Ежедневно 12:00–22:00', 'Срочная за 3 часа', 'Оплата при получении'],
+            kind: BuyerHeroKind.delivery,
+            chips: const [
+              'Ежедневно 12:00–22:00',
+              'Срочная за 3 часа',
+              'Оплата при получении'
+            ],
             stats: const [
               _Stat('1000', 'рублей доставка'),
               _Stat('3ч', 'срочная доставка'),
@@ -33,20 +34,36 @@ class DeliveryScreen extends StatelessWidget {
           ),
 
           // INTRO
-          _TextBlock(text: 'Компания Replatinum предлагает удобную и оперативную доставку техники по городу. '
-              'Доставка осуществляется ежедневно с 12:00 до 22:00. '
-              'Заказы, оформленные до 18:00, как правило доставляются в день оформления.'),
+          _TextBlock(
+              text:
+                  'Компания Replatinum предлагает удобную и оперативную доставку техники по городу. '
+                  'Доставка осуществляется ежедневно с 12:00 до 22:00. '
+                  'Заказы, оформленные до 18:00, как правило доставляются в день оформления.'),
 
           // Стандартная доставка
           _InfoCard(
             icon: Icons.inventory_2_outlined,
             title: 'Стандартная доставка',
-            lead: 'Доставляем технику в течение дня в любую точку города по фиксированной цене.',
+            lead:
+                'Доставляем технику в течение дня в любую точку города по фиксированной цене.',
             infoRows: const [
-              _InfoRow(icon: Icons.location_on_outlined, label: 'Зона', value: 'По городу'),
-              _InfoRow(icon: Icons.currency_ruble, label: 'Цена', value: '1 000 ₽', accent: true),
-              _InfoRow(icon: Icons.access_time, label: 'Время', value: '12:00 – 22:00'),
-              _InfoRow(icon: Icons.payments_outlined, label: 'Оплата', value: 'Наличными при получении'),
+              _InfoRow(
+                  icon: Icons.location_on_outlined,
+                  label: 'Зона',
+                  value: 'По городу'),
+              _InfoRow(
+                  icon: Icons.currency_ruble,
+                  label: 'Цена',
+                  value: '1 000 ₽',
+                  accent: true),
+              _InfoRow(
+                  icon: Icons.access_time,
+                  label: 'Время',
+                  value: '12:00 – 22:00'),
+              _InfoRow(
+                  icon: Icons.payments_outlined,
+                  label: 'Оплата',
+                  value: 'Наличными при получении'),
             ],
             note: 'Заказы до 18:00 как правило доставляются в тот же день.',
           ),
@@ -55,13 +72,15 @@ class DeliveryScreen extends StatelessWidget {
           _InfoCard(
             icon: Icons.bolt,
             title: 'Срочная доставка',
-            lead: 'Для клиентов, которым необходимо получить устройство в максимально короткие сроки.',
+            lead:
+                'Для клиентов, которым необходимо получить устройство в максимально короткие сроки.',
             bulletPoints: const [
               'Доступна при оформлении заказа до 20:00',
               'Среднее время доставки — до 3 часов с момента подтверждения',
               'Стоимость рассчитывается индивидуально',
             ],
-            note: 'Подробные условия и точную стоимость уточняйте у менеджера при оформлении заказа.',
+            note:
+                'Подробные условия и точную стоимость уточняйте у менеджера при оформлении заказа.',
             accentNote: true,
           ),
 
@@ -69,10 +88,14 @@ class DeliveryScreen extends StatelessWidget {
           _RulesCard(
             title: 'Правила доставки',
             rules: const [
-              _Rule('01', 'Место встречи', 'Доставка осуществляется в общественных и публичных местах — перед входом в здание или торговый центр.'),
-              _Rule('02', 'Оплата перед передачей', 'Передача товара осуществляется после полной оплаты заказа наличными средствами.'),
-              _Rule('03', 'Проверка комплектации', 'Вскрытие упаковки и проверка комплектации производится после оплаты.'),
-              _Rule('04', 'Ответственность', 'После передачи товара ответственность за внешние повреждения несёт покупатель.'),
+              _Rule('01', 'Место встречи',
+                  'Доставка осуществляется в общественных и публичных местах — перед входом в здание или торговый центр.'),
+              _Rule('02', 'Оплата перед передачей',
+                  'Передача товара осуществляется после полной оплаты заказа наличными средствами.'),
+              _Rule('03', 'Проверка комплектации',
+                  'Вскрытие упаковки и проверка комплектации производится после оплаты.'),
+              _Rule('04', 'Ответственность',
+                  'После передачи товара ответственность за внешние повреждения несёт покупатель.'),
             ],
           ),
 
@@ -93,41 +116,37 @@ class WarrantyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        backgroundColor: AppColors.darkAccent,
-        foregroundColor: Colors.white,
-        title: const Text('Гарантия', style: TextStyle(fontWeight: FontWeight.w600)),
-      ),
+      appBar: buyerAppBar(context, 'Гарантия'),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
           _HeroBlock(
-            icon: Icons.security_rounded,
-            title: 'Гарантия replatinum',
-            subtitle: 'Официальная ответственность за качество каждого проданного устройства',
+            kind: BuyerHeroKind.warranty,
             stats: const [
               _Stat('36', 'месяцев гарантии'),
               _Stat('100%', 'официальная техника'),
               _Stat('0', 'скрытых платежей'),
             ],
           ),
-
-          _TextBlock(text: 'Компания Replatinum несёт ответственность за качество реализуемой продукции '
-              'и обеспечивает гарантийное обслуживание в соответствии с действующим законодательством РФ. '
-              'Все гарантийные обязательства регулируются нормами Закона РФ «О защите прав потребителей».'),
-
+          _TextBlock(
+              text:
+                  'Компания Replatinum несёт ответственность за качество реализуемой продукции '
+                  'и обеспечивает гарантийное обслуживание в соответствии с действующим законодательством РФ. '
+                  'Все гарантийные обязательства регулируются нормами Закона РФ «О защите прав потребителей».'),
           _InfoCard(
             icon: Icons.verified_user_outlined,
             title: 'Стандартная гарантия',
-            lead: 'На большинство товаров распространяется стандартная гарантия сроком 12 месяцев.',
+            lead:
+                'На большинство товаров распространяется стандартная гарантия сроком 12 месяцев.',
             bulletPoints: const [
               'Бесплатное устранение производственных недостатков',
               'Диагностика устройства при обращении',
               'Ремонт или замена комплектующих при подтверждении гарантийного случая',
               'Консультационная поддержка по вопросам эксплуатации',
             ],
-            note: 'Гарантийное обслуживание осуществляется при соблюдении правил использования и отсутствии механических повреждений.',
+            note:
+                'Гарантийное обслуживание осуществляется при соблюдении правил использования и отсутствии механических повреждений.',
           ),
-
           _InfoCard(
             icon: Icons.stars_rounded,
             title: 'Расширенная гарантия Replatinum',
@@ -141,7 +160,6 @@ class WarrantyScreen extends StatelessWidget {
             note: 'Расширенная гарантия оформляется при покупке товара.',
             accentNote: true,
           ),
-
           _InfoCard(
             icon: Icons.handshake_outlined,
             title: 'Прозрачность условий',
@@ -152,7 +170,6 @@ class WarrantyScreen extends StatelessWidget {
               'Отсутствуют скрытые платежи и дополнительные обязательства',
             ],
           ),
-
           const SizedBox(height: 24),
         ],
       ),
@@ -177,56 +194,22 @@ class ContactsScreen extends StatelessWidget {
   }
 
   void _openMap() async {
-    final uri = Uri.parse('https://yandex.com/maps/org/replatinum/186622082456/?indoorLevel=2&ll=39.052631%2C45.034483&z=17');
-    if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+    final uri = Uri.parse(
+        'https://yandex.com/maps/org/replatinum/186622082456/?indoorLevel=2&ll=39.052631%2C45.034483&z=17');
+    if (await canLaunchUrl(uri)) {
+      launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        backgroundColor: AppColors.darkAccent,
-        foregroundColor: Colors.white,
-        title: const Text('Контакты', style: TextStyle(fontWeight: FontWeight.w600)),
-      ),
+      appBar: buyerAppBar(context, 'Контакты'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Заголовок
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.darkAccent, Color(0xFF3D3D4A)],
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryAccent.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.location_on, color: AppColors.primaryAccent, size: 14),
-                    const SizedBox(width: 4),
-                    const Text('Наш магазин', style: TextStyle(color: AppColors.primaryAccent, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ]),
-                ),
-                const SizedBox(height: 12),
-                const Text('Мы в Краснодаре', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                const Text('ТРК «СБС Мегамолл», 2 этаж — зона кинотеатров IMAX',
-                    style: TextStyle(color: Colors.white70, fontSize: 14)),
-              ],
-            ),
-          ),
-
+          const BuyerHero(kind: BuyerHeroKind.contacts),
           const SizedBox(height: 16),
 
           // Адрес
@@ -234,12 +217,13 @@ class ContactsScreen extends StatelessWidget {
             icon: Icons.location_on_outlined,
             label: 'Адрес',
             value: 'Краснодар, ул. Уральская, 79/1',
-            note: 'ТРК «СБС Мегамолл», 2 этаж\nМагазин Replatinum\nОриентир: возле кинокасс, напротив Бумбараш',
+            note:
+                'ТРК «СБС Мегамолл», 2 этаж\nМагазин Replatinum\nОриентир: возле кинокасс, напротив Бумбараш',
             onTap: _openMap,
             actionLabel: 'Открыть в Яндекс.Картах',
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Телефон
           _ContactCard(
@@ -251,7 +235,7 @@ class ContactsScreen extends StatelessWidget {
             actionLabel: 'Позвонить',
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Email
           _ContactCard(
@@ -263,7 +247,7 @@ class ContactsScreen extends StatelessWidget {
             actionLabel: 'Написать',
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Рейтинг Яндекс
           GestureDetector(
@@ -273,18 +257,28 @@ class ContactsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0,2))],
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2))
+                ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 56, height: 56,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
                       color: AppColors.primaryAccent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Center(
-                      child: Text('5,0', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                      child: Text('5,0',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -292,20 +286,29 @@ class ContactsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(children: List.generate(5, (_) => const Icon(Icons.star, color: Color(0xFFFFCC00), size: 16))),
+                        Row(
+                            children: List.generate(
+                                5,
+                                (_) => const Icon(Icons.star,
+                                    color: Color(0xFFFFCC00), size: 16))),
                         const SizedBox(height: 2),
-                        const Text('68 отзывов на Яндекс.Картах', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                        const Text('Яндекс.Карты', style: TextStyle(fontSize: 12, color: AppColors.secondaryText)),
+                        const Text('68 отзывов на Яндекс.Картах',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w500)),
+                        const Text('Яндекс.Карты',
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.secondaryText)),
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.secondaryText),
+                  const Icon(Icons.arrow_forward_ios,
+                      size: 14, color: AppColors.secondaryText),
                 ],
               ),
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Часы работы
           Container(
@@ -318,11 +321,15 @@ class ContactsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  const Icon(Icons.access_time, color: AppColors.primaryAccent, size: 18),
+                  const Icon(Icons.access_time,
+                      color: AppColors.primaryAccent, size: 18),
                   const SizedBox(width: 8),
-                  const Text('Режим работы', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const Expanded(
+                      child: Text('Режим работы',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15))),
                 ]),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 _workRow('Понедельник – Воскресенье', '10:00 – 22:00'),
               ],
             ),
@@ -340,71 +347,73 @@ class ContactsScreen extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 class CreditScreen extends StatefulWidget {
   const CreditScreen({super.key});
-  @override State<CreditScreen> createState() => _CreditScreenState();
+  @override
+  State<CreditScreen> createState() => _CreditScreenState();
 }
 
 class _CreditScreenState extends State<CreditScreen> {
-  int _activePanel = 0;
+  int? _activePanel = 0;
 
   static const _panels = [
-    _Panel('Что такое рассрочка?',
+    _Panel(
+        'Что такое рассрочка?',
         'Рассрочка — это способ покупки техники с оплатой частями без единовременной полной суммы.\n\n'
-        'Вы забираете устройство сразу, а оплачиваете его равными платежами в течение установленного срока.\n\n'
-        'Это удобный способ приобрести товар уже сегодня, распределив нагрузку на бюджет.'),
-    _Panel('Виды рассрочки в replatinum',
+            'Вы забираете устройство сразу, а оплачиваете его равными платежами в течение установленного срока.\n\n'
+            'Это удобный способ приобрести товар уже сегодня, распределив нагрузку на бюджет.'),
+    _Panel(
+        'Виды рассрочки в replatinum',
         'В нашем магазине доступна рассрочка от Совкомбанка по карте «Халва».\n\n'
-        'Формат: «Купи сейчас — плати потом»\n\n'
-        'Преимущества:\n• Быстрое оформление\n• Минимум документов\n• Мгновенное решение\n• Оплата равными платежами\n\n'
-        'Подробные условия и срок зависят от предложения банка.'),
-    _Panel('Условия рассрочки',
+            'Формат: «Купи сейчас — плати потом»\n\n'
+            'Преимущества:\n• Быстрое оформление\n• Минимум документов\n• Мгновенное решение\n• Оплата равными платежами\n\n'
+            'Подробные условия и срок зависят от предложения банка.'),
+    _Panel(
+        'Условия рассрочки',
         '• Рассрочка оформляется с подключением дополнительной гарантии replatinum.\n\n'
-        '• Дополнительная гарантия защищает устройство от непредвиденных расходов.\n\n'
-        '• На товары в рассрочку не распространяется акционная цена интернет-магазина.'),
-    _Panel('Почему цена отличается?',
+            '• Дополнительная гарантия защищает устройство от непредвиденных расходов.\n\n'
+            '• На товары в рассрочку не распространяется акционная цена интернет-магазина.'),
+    _Panel(
+        'Почему цена отличается?',
         'Стоимость при рассрочке может отличаться от цены при оплате наличными.\n\n'
-        'Это связано с тем, что:\n• К стоимости добавляется цена дополнительной гарантии\n'
-        '• Данные услуги незначительно увеличивают ежемесячный платёж\n'
-        '• На товары в рассрочку не распространяется акционная цена\n\n'
-        'Мы всегда заранее рассчитываем итоговую сумму — без скрытых условий.'),
-    _Panel('Кредит',
+            'Это связано с тем, что:\n• К стоимости добавляется цена дополнительной гарантии\n'
+            '• Данные услуги незначительно увеличивают ежемесячный платёж\n'
+            '• На товары в рассрочку не распространяется акционная цена\n\n'
+            'Мы всегда заранее рассчитываем итоговую сумму — без скрытых условий.'),
+    _Panel(
+        'Кредит',
         'Помимо рассрочки, доступно оформление кредита.\n\n'
-        'Условия:\n• Более 16 банков-партнёров\n• Срок от 2 до 60 месяцев\n'
-        '• Индивидуальный подбор условий\n• Быстрое рассмотрение заявки\n\n'
-        'Наши менеджеры подберут оптимальное предложение с учётом ваших пожеланий.'),
-    _Panel('Досрочное погашение',
+            'Условия:\n• Более 16 банков-партнёров\n• Срок от 2 до 60 месяцев\n'
+            '• Индивидуальный подбор условий\n• Быстрое рассмотрение заявки\n\n'
+            'Наши менеджеры подберут оптимальное предложение с учётом ваших пожеланий.'),
+    _Panel(
+        'Досрочное погашение',
         'Да, досрочное погашение возможно.\n\n'
-        'Условия и порядок досрочного погашения уточняются в банке, одобрившем кредит.'),
+            'Условия и порядок досрочного погашения уточняются в банке, одобрившем кредит.'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        backgroundColor: AppColors.darkAccent,
-        foregroundColor: Colors.white,
-        title: const Text('Рассрочка и кредит', style: TextStyle(fontWeight: FontWeight.w600)),
-      ),
+      appBar: buyerAppBar(context, 'Рассрочка и кредит'),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
           _HeroBlock(
-            icon: Icons.credit_card_rounded,
-            title: 'Рассрочка и кредит\nв Replatinum',
-            subtitle: 'Забирайте технику сегодня — платите частями',
+            kind: BuyerHeroKind.credit,
             stats: const [
               _Stat('16+', 'банков-партнёров'),
               _Stat('5мин', 'одобрение'),
               _Stat('60мес', 'максимальный срок'),
             ],
           ),
-
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(top: 16),
             child: Column(
               children: List.generate(_panels.length, (i) {
                 final isActive = _activePanel == i;
                 return GestureDetector(
-                  onTap: () => setState(() => _activePanel = i),
+                  onTap: () =>
+                      setState(() => _activePanel = isActive ? null : i),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     margin: const EdgeInsets.only(bottom: 8),
@@ -412,7 +421,9 @@ class _CreditScreenState extends State<CreditScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isActive ? AppColors.primaryAccent : Colors.transparent,
+                        color: isActive
+                            ? AppColors.primaryAccent
+                            : Colors.transparent,
                         width: 1.5,
                       ),
                     ),
@@ -423,20 +434,32 @@ class _CreditScreenState extends State<CreditScreen> {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              Expanded(child: Text(_panels[i].title,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: isActive ? AppColors.primaryAccent : AppColors.mainText))),
-                              Icon(isActive ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                                  color: isActive ? AppColors.primaryAccent : AppColors.secondaryText),
+                              Expanded(
+                                  child: Text(_panels[i].title,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: isActive
+                                              ? AppColors.primaryAccent
+                                              : AppColors.mainText))),
+                              Icon(
+                                  isActive
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  color: isActive
+                                      ? AppColors.primaryAccent
+                                      : AppColors.secondaryText),
                             ],
                           ),
                         ),
-                        if (isActive) Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Text(_panels[i].content,
-                              style: const TextStyle(color: AppColors.mainText, fontSize: 14, height: 1.5)),
-                        ),
+                        if (isActive)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Text(_panels[i].content,
+                                style: const TextStyle(
+                                    color: AppColors.mainText,
+                                    fontSize: 14,
+                                    height: 1.5)),
+                          ),
                       ],
                     ),
                   ),
@@ -444,7 +467,6 @@ class _CreditScreenState extends State<CreditScreen> {
               }),
             ),
           ),
-
           const SizedBox(height: 24),
         ],
       ),
@@ -457,75 +479,59 @@ class _CreditScreenState extends State<CreditScreen> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _HeroBlock extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
+  final BuyerHeroKind kind;
   final List<String> chips;
   final List<_Stat> stats;
-
-  const _HeroBlock({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.chips = const [],
-    required this.stats,
-  });
-
+  const _HeroBlock(
+      {required this.kind, this.chips = const [], required this.stats});
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.darkAccent, Color(0xFF3A3A45)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 52, height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.primaryAccent.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: AppColors.primaryAccent, size: 28),
-          ),
+  Widget build(BuildContext context) => Column(children: [
+        BuyerHero(kind: kind),
+        if (chips.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, height: 1.2)),
-          const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-          if (chips.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8, runSpacing: 6,
-              children: chips.map((c) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(c, style: const TextStyle(color: Colors.white, fontSize: 12)),
-              )).toList(),
-            ),
-          ],
-          const SizedBox(height: 20),
-          Row(
-            children: stats.map((s) => Expanded(
-              child: Column(
-                children: [
-                  Text(s.value, style: const TextStyle(color: AppColors.primaryAccent, fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text(s.label, style: const TextStyle(color: Colors.white60, fontSize: 11), textAlign: TextAlign.center),
-                ],
-              ),
-            )).toList(),
-          ),
+          Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: chips
+                      .map((text) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                              color: const Color(0xFFF0F4EA),
+                              borderRadius: BorderRadius.circular(10)),
+                          child: Text(text,
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppColors.primaryText))))
+                      .toList())),
         ],
-      ),
-    );
-  }
+        const SizedBox(height: 16),
+        Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: stats
+                    .map((stat) => Expanded(
+                            child: Column(children: [
+                          Text(stat.value,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryText)),
+                          const SizedBox(height: 4),
+                          Text(stat.label,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.secondaryText,
+                                  height: 1.4)),
+                        ])))
+                    .toList())),
+      ]);
 }
 
 class _TextBlock extends StatelessWidget {
@@ -535,8 +541,10 @@ class _TextBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Text(text, style: const TextStyle(color: AppColors.mainText, fontSize: 14, height: 1.6)),
+      padding: const EdgeInsets.only(top: 16),
+      child: Text(text,
+          style: const TextStyle(
+              color: AppColors.mainText, fontSize: 14, height: 1.6)),
     );
   }
 }
@@ -563,11 +571,16 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,13 +589,17 @@ class _InfoCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: accentNote ? AppColors.primaryAccent.withValues(alpha: 0.08) : const Color(0xFFF8F9FA),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              color: accentNote
+                  ? AppColors.primaryAccent.withValues(alpha: 0.08)
+                  : const Color(0xFFF8F9FA),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 40, height: 40,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: AppColors.primaryAccent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
@@ -590,7 +607,12 @@ class _InfoCard extends StatelessWidget {
                   child: Icon(icon, color: AppColors.primaryAccent, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.mainText))),
+                Expanded(
+                    child: Text(title,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.mainText))),
               ],
             ),
           ),
@@ -599,45 +621,62 @@ class _InfoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(lead, style: const TextStyle(color: AppColors.mainText, fontSize: 14, height: 1.5)),
-
+                Text(lead,
+                    style: const TextStyle(
+                        color: AppColors.mainText, fontSize: 14, height: 1.5)),
                 if (infoRows.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   ...infoRows.map((row) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(children: [
-                      Icon(row.icon, size: 16, color: row.accent ? AppColors.primaryAccent : AppColors.secondaryText),
-                      const SizedBox(width: 8),
-                      Text(row.label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 13)),
-                      const Spacer(),
-                      Text(row.value, style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: row.accent ? AppColors.primaryAccent : AppColors.mainText)),
-                    ]),
-                  )),
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(children: [
+                          Icon(row.icon,
+                              size: 16,
+                              color: row.accent
+                                  ? AppColors.primaryAccent
+                                  : AppColors.secondaryText),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(row.label,
+                                  style: const TextStyle(
+                                      color: AppColors.secondaryText,
+                                      fontSize: 13))),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              flex: 2,
+                              child: Text(row.value,
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: row.accent
+                                          ? AppColors.primaryAccent
+                                          : AppColors.mainText))),
+                        ]),
+                      )),
                 ],
-
                 if (bulletPoints.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   ...bulletPoints.map((b) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 5),
-                          child: Icon(Icons.circle, size: 6, color: AppColors.primaryAccent),
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 5),
+                              child: Icon(Icons.circle,
+                                  size: 6, color: AppColors.primaryAccent),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                                child: Text(b,
+                                    style: const TextStyle(
+                                        fontSize: 14, height: 1.4))),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(b, style: const TextStyle(fontSize: 14, height: 1.4))),
-                      ],
-                    ),
-                  )),
+                      )),
                 ],
-
                 if (note != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -649,13 +688,23 @@ class _InfoCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(accentNote ? Icons.check_circle_outline : Icons.info_outline,
-                            size: 16, color: accentNote ? AppColors.primaryAccent : AppColors.secondaryText),
+                        Icon(
+                            accentNote
+                                ? Icons.check_circle_outline
+                                : Icons.info_outline,
+                            size: 16,
+                            color: accentNote
+                                ? AppColors.primaryAccent
+                                : AppColors.secondaryText),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(note!, style: TextStyle(
-                            fontSize: 12,
-                            color: accentNote ? AppColors.primaryAccent : AppColors.secondaryText,
-                            height: 1.4))),
+                        Expanded(
+                            child: Text(note!,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: accentNote
+                                        ? AppColors.primaryAccent
+                                        : AppColors.secondaryText,
+                                    height: 1.4))),
                       ],
                     ),
                   ),
@@ -677,7 +726,7 @@ class _RulesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -686,34 +735,48 @@ class _RulesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           ...rules.map((r) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryAccent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(child: Text(r.num,
-                      style: const TextStyle(color: AppColors.primaryAccent, fontSize: 11, fontWeight: FontWeight.bold))),
-                ),
-                const SizedBox(width: 12),
-                Expanded(child: Column(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(r.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 4),
-                    Text(r.text, style: const TextStyle(color: AppColors.secondaryText, fontSize: 13, height: 1.4)),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                          child: Text(r.num,
+                              style: const TextStyle(
+                                  color: AppColors.primaryAccent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold))),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(r.title,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 4),
+                        Text(r.text,
+                            style: const TextStyle(
+                                color: AppColors.secondaryText,
+                                fontSize: 13,
+                                height: 1.4)),
+                      ],
+                    )),
                   ],
-                )),
-              ],
-            ),
-          )),
+                ),
+              )),
         ],
       ),
     );
@@ -748,7 +811,12 @@ class _ContactCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0,2))],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,7 +824,8 @@ class _ContactCard extends StatelessWidget {
             // Иконка + метка
             Row(children: [
               Container(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: AppColors.primaryAccent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -764,18 +833,25 @@ class _ContactCard extends StatelessWidget {
                 child: Icon(icon, color: AppColors.primaryAccent, size: 18),
               ),
               const SizedBox(width: 10),
-              Text(label, style: const TextStyle(
-                  fontSize: 12, color: AppColors.secondaryText, fontWeight: FontWeight.w500)),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.secondaryText,
+                      fontWeight: FontWeight.w500)),
             ]),
             const SizedBox(height: 10),
             // Значение
-            Text(value, style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.mainText)),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.mainText)),
             const SizedBox(height: 4),
             // Подсказка
-            Text(note, style: const TextStyle(
-                fontSize: 13, color: AppColors.secondaryText, height: 1.4)),
-            const SizedBox(height: 12),
+            Text(note,
+                style: const TextStyle(
+                    fontSize: 13, color: AppColors.secondaryText, height: 1.4)),
+            const SizedBox(height: 16),
             // Кнопка
             SizedBox(
               width: double.infinity,
@@ -785,10 +861,13 @@ class _ContactCard extends StatelessWidget {
                 label: Text(actionLabel),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primaryAccent,
-                  side: const BorderSide(color: AppColors.primaryAccent, width: 1),
+                  side: const BorderSide(
+                      color: AppColors.primaryAccent, width: 1),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  textStyle: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -806,14 +885,22 @@ class _ContactCard extends StatelessWidget {
   }
 }
 
-
 Widget _workRow(String day, String time) => Padding(
-  padding: const EdgeInsets.only(bottom: 8),
-  child: Row(children: [
-    Expanded(child: Text(day, style: const TextStyle(fontSize: 14, color: AppColors.mainText))),
-    Text(time, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryAccent)),
-  ]),
-);
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(children: [
+        Expanded(
+            child: Text(day,
+                style:
+                    const TextStyle(fontSize: 14, color: AppColors.mainText))),
+        Flexible(
+            child: Text(time,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText))),
+      ]),
+    );
 
 // ─── Данные ────────────────────────────────────────────────────────────────
 
@@ -828,7 +915,11 @@ class _InfoRow {
   final String label;
   final String value;
   final bool accent;
-  const _InfoRow({required this.icon, required this.label, required this.value, this.accent = false});
+  const _InfoRow(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      this.accent = false});
 }
 
 class _Rule {

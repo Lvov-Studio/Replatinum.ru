@@ -40,12 +40,20 @@ class CatalogProductsView extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.w700))),
                 IconButton(
+                    tooltip: 'Обновить товары',
+                    onPressed: provider.isLoading ? null : provider.retry,
+                    icon: const Icon(Icons.refresh, size: 22)),
+                IconButton(
                     tooltip: 'Поиск товаров',
                     onPressed: () => showSearch(
                         context: context, delegate: ProductSearchDelegate()),
                     icon: const Icon(Icons.search)),
               ])),
           const Divider(height: 1, color: AppColors.border),
+          if (provider.isLoading &&
+              (provider.browsing || products.isNotEmpty)) ...[
+            const LinearProgressIndicator(minHeight: 2),
+          ],
           if (!provider.browsing &&
               !provider.isLoading &&
               provider.error.isEmpty &&
@@ -118,17 +126,10 @@ class CatalogProductsView extends StatelessWidget {
               child: ColoredBox(
                   color:
                       provider.browsing ? Colors.white : AppColors.background,
-                  child: provider.browsing
+                  child: provider.browsing && provider.error.isEmpty
                       ? CatalogSubsectionsView(provider: provider)
-                      : provider.isLoading
-                          ? const Center(
-                              child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                  CircularProgressIndicator(),
-                                  SizedBox(height: 16),
-                                  Text('Загружаем товары и фильтры…')
-                                ]))
+                      : provider.isLoading && products.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
                           : provider.error.isNotEmpty
                               ? Center(
                                   child: Column(
@@ -141,21 +142,7 @@ class CatalogProductsView extends StatelessWidget {
                                           child: const Text('Повторить'))
                                     ]))
                               : products.isEmpty
-                                  ? Center(
-                                      child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                          Text(provider.filters.count > 0
-                                              ? 'По этим фильтрам товаров нет'
-                                              : 'В этом разделе пока нет товаров'),
-                                          if (provider.filters.count > 0)
-                                            TextButton(
-                                                onPressed: () =>
-                                                    provider.applyFilters(
-                                                        const CatalogFilters()),
-                                                child: const Text(
-                                                    'Сбросить фильтры')),
-                                        ]))
+                                  ? _CatalogEmptyState(provider: provider)
                                   : LayoutBuilder(
                                       builder: (context, constraints) {
                                       final width =
@@ -172,16 +159,18 @@ class CatalogProductsView extends StatelessWidget {
                                           key: ValueKey(
                                               '${provider.selectedCategory?.id}:${provider.filters}:${provider.sort}'),
                                           slivers: [
-                                            SliverToBoxAdapter(
-                                                child: Padding(
-                                                    padding: const EdgeInsets
-                                                        .fromLTRB(12, 4, 12, 0),
-                                                    child: Text(
-                                                        '${provider.total} товаров',
-                                                        style: const TextStyle(
-                                                            fontSize: 11,
-                                                            color: AppColors
-                                                                .mainText)))),
+                                            if (!provider.isLoading)
+                                              SliverToBoxAdapter(
+                                                  child: Padding(
+                                                      padding: const EdgeInsets
+                                                          .fromLTRB(
+                                                          12, 4, 12, 0),
+                                                      child: Text(
+                                                          '${provider.total} товаров',
+                                                          style: const TextStyle(
+                                                              fontSize: 11,
+                                                              color: AppColors
+                                                                  .mainText)))),
                                             SliverPadding(
                                                 padding:
                                                     const EdgeInsets.all(10),
@@ -224,5 +213,63 @@ class CatalogProductsView extends StatelessWidget {
                                           ]);
                                     }))),
         ]));
+  }
+}
+
+class _CatalogEmptyState extends StatelessWidget {
+  const _CatalogEmptyState({required this.provider});
+  final ProductProvider provider;
+  @override
+  Widget build(BuildContext context) {
+    final filtered = provider.filters.count > 0;
+    return Center(
+        child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 340),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  DecoratedBox(
+                      decoration: BoxDecoration(
+                          color: AppColors.primaryAccent.withValues(alpha: .1),
+                          borderRadius: BorderRadius.circular(24)),
+                      child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Icon(
+                              filtered
+                                  ? Icons.search_off_outlined
+                                  : Icons.inventory_2_outlined,
+                              size: 36,
+                              color: AppColors.primaryAccent))),
+                  const SizedBox(height: 20),
+                  Text(filtered ? 'Ничего не нашлось' : 'Пока нет товаров',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.mainText)),
+                  const SizedBox(height: 10),
+                  Text(
+                      filtered
+                          ? 'Попробуйте убрать часть фильтров или посмотреть другие разделы каталога.'
+                          : 'В этом разделе пока пусто. Посмотрите другие разделы — там может быть то, что вы ищете.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: AppColors.secondaryText, height: 1.5)),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                          onPressed: filtered
+                              ? () =>
+                                  provider.applyFilters(const CatalogFilters())
+                              : provider.clearCategory,
+                          child: Text(filtered
+                              ? 'Сбросить фильтры'
+                              : 'Перейти в каталог'))),
+                  if (filtered)
+                    TextButton(
+                        onPressed: provider.clearCategory,
+                        child: const Text('Другие разделы')),
+                ]))));
   }
 }

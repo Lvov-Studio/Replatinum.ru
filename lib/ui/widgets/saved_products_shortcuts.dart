@@ -6,6 +6,7 @@ import '../screens/saved_products_screen.dart';
 import '../screens/info_screens.dart';
 
 void openSavedProducts(BuildContext context, {bool compare = false}) {
+  context.read<SavedProductsProvider>().refreshRemote();
   Navigator.of(context).push(MaterialPageRoute<void>(
     builder: (_) => SavedProductsScreen(compare: compare),
   ));

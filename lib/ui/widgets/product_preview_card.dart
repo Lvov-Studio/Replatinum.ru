@@ -8,6 +8,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/saved_products_provider.dart';
 import '../screens/product_detail_screen.dart';
 import 'product_purchase_sheets.dart';
+import 'product_badge.dart';
 
 // ─── Карточка товара с бейджем ─────────────────────────────────────────────
 class ProductPreviewCard extends StatelessWidget {
@@ -55,9 +56,15 @@ class ProductPreviewCard extends StatelessWidget {
                   child: Column(children: [
                     SizedBox(
                         height: catalogLayout ? 48 : 40,
-                        child: Row(children: [
-                          const Spacer(),
-                          _savedActions(context),
+                        child: Stack(children: [
+                          if (badge.isNotEmpty)
+                            Positioned(
+                                top: 8, left: 8, child: ProductBadge(badge)),
+                          Positioned(
+                              top: 0,
+                              bottom: 0,
+                              right: 0,
+                              child: _savedActions(context)),
                         ])),
                     Expanded(
                         child: Stack(fit: StackFit.expand, children: [
@@ -79,22 +86,6 @@ class ProductPreviewCard extends StatelessWidget {
                       if (product.ruStoreWarning)
                         Positioned(
                             bottom: 0, right: 0, child: _ruStore(context)),
-                      if (badge.isNotEmpty)
-                        Positioned(
-                            top: 4,
-                            left: 6,
-                            child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                    color: badgeColor,
-                                    borderRadius: BorderRadius.circular(4)),
-                                child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 5, vertical: 2),
-                                    child: Text(badge,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800))))),
                     ])),
                   ]),
                 )),
@@ -121,10 +112,7 @@ class ProductPreviewCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                        product.price > 0
-                            ? formatPrice(product.price)
-                            : 'По запросу',
+                    Text(product.price > 0 ? formatPrice(product.price) : '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -193,7 +181,7 @@ class ProductPreviewCard extends StatelessWidget {
   }
 
   Widget _price(BuildContext context) =>
-      Text(product.price > 0 ? formatPrice(product.price) : 'По запросу',
+      Text(product.price > 0 ? formatPrice(product.price) : '',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -217,14 +205,7 @@ class ProductPreviewCard extends StatelessWidget {
           'Без RuStore',
           const Text(
               'В товаре имеется недостаток: RuStore недоступен на устройствах Apple')),
-      icon: const DecoratedBox(
-          decoration: BoxDecoration(
-              color: Color(0xFF007AC1),
-              borderRadius: BorderRadius.all(Radius.circular(4))),
-          child: Padding(
-              padding: EdgeInsets.all(2),
-              child: Icon(Icons.app_blocking_outlined,
-                  size: 17, color: Colors.white))));
+      icon: Image.asset('assets/icons/no-rustore.png', width: 24, height: 24));
   Widget _savedActions(BuildContext context) =>
       Consumer<SavedProductsProvider>(builder: (context, saved, _) {
         final id = product.offerId ?? product.id;

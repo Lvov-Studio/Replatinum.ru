@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../core/utils/price_formatter.dart';
+
 import '../../data/api/api_service.dart';
 import '../../core/theme/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -76,46 +75,6 @@ Future<void> showProductInformation(
                       const SizedBox(height: 16),
                       content
                     ]))));
-
-Future<void> callStore() async => launchUrl(Uri.parse('tel:+78612070304'));
-
-class InstallmentCalculator extends StatefulWidget {
-  final num price;
-  const InstallmentCalculator({super.key, required this.price});
-  @override
-  State<InstallmentCalculator> createState() => _InstallmentCalculatorState();
-}
-
-class _InstallmentCalculatorState extends State<InstallmentCalculator> {
-  int _months = 24;
-  @override
-  Widget build(BuildContext context) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(formatPrice(widget.price),
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 16),
-        const Text('Срок рассрочки'),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final term in const [3, 6, 9, 12, 18, 24])
-            ChoiceChip(
-                label: Text('$term мес.'),
-                selected: _months == term,
-                onSelected: (_) => setState(() => _months = term))
-        ]),
-        const SizedBox(height: 20),
-        Text('${formatPrice((widget.price / _months).ceil())}/мес.',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        const Text(
-            'Рассрочка оформляется только в магазине Replatinum. Дистанционная подача заявки недоступна. Расчёт предварительный; условия уточните у менеджера.'),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-            onPressed: callStore,
-            icon: const Icon(Icons.phone_outlined),
-            label: const Text('Позвонить в магазин'))
-      ]);
-}
 
 class ProductInquiryForm extends StatefulWidget {
   final String productId, productName;

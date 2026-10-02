@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -13,13 +14,42 @@ class ShowcaseApi extends ApiService {
   String? requestedType;
   @override
   Future<List<CatalogItem>> getCatalogItems(
-      {String? categoryId, String? type, bool Function()? isCurrent}) async {
+      {String? categoryId,
+      String? type,
+      bool Function()? isCurrent,
+      void Function(List<CatalogItem>)? onProgress}) async {
     requestedType = type;
     return [];
   }
 }
 
 void main() {
+  testWidgets('empty sales hide the whole section; errors keep retry',
+      (tester) async {
+    var retries = 0;
+    Widget showcase(Future<List<Product>> future) => MaterialApp(
+            home: Scaffold(
+                body: HomeShowcaseCarousel(
+          title: 'Акции',
+          type: 'sale',
+          badge: 'Акция',
+          future: future,
+          onRetry: () => retries++,
+        )));
+    await tester.pumpWidget(showcase(Future.value([])));
+    await tester.pumpAndSettle();
+    expect(find.text('Акции'), findsNothing);
+    expect(find.text('Посмотреть все'), findsNothing);
+    expect(find.text('Пока нет товаров'), findsNothing);
+    final failed = Completer<List<Product>>();
+    await tester.pumpWidget(showcase(failed.future));
+    failed.completeError(Exception('network'));
+    await tester.pumpAndSettle();
+    expect(find.text('Акции'), findsOneWidget);
+    await tester.tap(find.text('Повторить'));
+    expect(retries, 1);
+  });
+
   for (final (width, scale) in [
     (320.0, 1.0),
     (320.0, 1.3),

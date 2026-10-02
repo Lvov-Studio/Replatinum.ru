@@ -33,6 +33,12 @@ class SavedProduct {
       SavedProduct(Product.fromJson(j), '${j['sku']}', parseSpecs(j['specs']));
 }
 
+abstract class SavedProductsRemote {
+  Future<Map<String, List<SavedProduct>>> fetch();
+  Future<void> set(SavedProduct product,
+      {required bool enabled, required bool compare});
+}
+
 class SavedProductsProvider extends ChangeNotifier {
   final Map<String, SavedProduct> favorites = {};
   final Map<String, SavedProduct> comparison = {};
@@ -41,6 +47,71 @@ class SavedProductsProvider extends ChangeNotifier {
   String? error;
   bool _disposed = false;
   Future<void> _writes = Future.value();
+  SavedProductsRemote? _remote;
+  Map<String, SavedProduct>? _guestFavorites, _guestComparison;
+  Future<void> _remoteWrites = Future.value();
+  bool syncing = false;
+  int _remoteVersion = 0;
+  bool get accountConnected => _remote != null;
+  Future<void> connect(SavedProductsRemote remote) async {
+    disconnect(notify: false);
+    _guestFavorites = Map.of(favorites);
+    _guestComparison = Map.of(comparison);
+    favorites.clear();
+    comparison.clear();
+    _remote = remote;
+    await refreshRemote();
+  }
+
+  Future<void> refreshRemote() async {
+    final remote = _remote;
+    if (remote == null || syncing) return;
+    final version = _remoteVersion;
+    syncing = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _remoteWrites;
+      final lists = await remote.fetch();
+      if (_disposed || version != _remoteVersion) return;
+      favorites
+        ..clear()
+        ..addEntries(
+            (lists['favorites'] ?? []).map((p) => MapEntry(p.skuId, p)));
+      comparison
+        ..clear()
+        ..addEntries(
+            (lists['comparison'] ?? []).map((p) => MapEntry(p.skuId, p)));
+    } catch (_) {
+      if (!_disposed && version == _remoteVersion) {
+        error = 'Не удалось обновить сохранённые товары. Повторите обновление.';
+      }
+    } finally {
+      if (!_disposed && version == _remoteVersion) {
+        syncing = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  void disconnect({bool notify = true}) {
+    _remoteVersion++;
+    _remote = null;
+    syncing = false;
+    if (_guestFavorites != null) {
+      favorites
+        ..clear()
+        ..addAll(_guestFavorites!);
+      comparison
+        ..clear()
+        ..addAll(_guestComparison!);
+      _guestFavorites = null;
+      _guestComparison = null;
+    }
+    error = null;
+    if (notify && !_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     try {
       _file = File(
@@ -67,13 +138,36 @@ class SavedProductsProvider extends ChangeNotifier {
   }
 
   void toggle(SavedProduct product, {bool compare = false}) {
-    if (!ready) return;
+    if (!ready || syncing) return;
     final target = compare ? comparison : favorites;
+    final enabled = !target.containsKey(product.skuId);
     target.containsKey(product.skuId)
         ? target.remove(product.skuId)
         : target[product.skuId] = product;
     error = null;
     notifyListeners();
+    final remote = _remote;
+    if (remote != null) {
+      final version = _remoteVersion;
+      _remoteWrites = _remoteWrites.then((_) async {
+        if (_disposed || version != _remoteVersion) return;
+        try {
+          await remote.set(product, enabled: enabled, compare: compare);
+        } catch (_) {
+          if (!_disposed && version == _remoteVersion) {
+            // Roll back only if this mutation is still the latest local intent.
+            if (target.containsKey(product.skuId) == enabled) {
+              enabled
+                  ? target.remove(product.skuId)
+                  : target[product.skuId] = product;
+            }
+            error = 'Не удалось сохранить на сайте. Повторите действие.';
+            notifyListeners();
+          }
+        }
+      });
+      return;
+    }
     final contents = jsonEncode({
       'favorites': favorites.values.map((s) => s.toJson()).toList(),
       'comparison': comparison.values.map((s) => s.toJson()).toList()

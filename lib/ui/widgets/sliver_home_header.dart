@@ -1,3 +1,4 @@
+import 'home_search_hint.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
@@ -199,28 +200,28 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
                             color: const Color(0xFFE8E8ED),
                             borderRadius: BorderRadius.circular(12),
                             clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              key: const ValueKey('home-search'),
-                              onTap: onSearch,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 14),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.search,
-                                        color: AppColors.mainText, size: 23),
-                                    SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text('Поиск товаров',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                              color: AppColors.mainText,
-                                              fontSize: 15)),
+                            child: Semantics(
+                                label: 'Поиск товаров',
+                                button: true,
+                                child: InkWell(
+                                  key: const ValueKey('home-search'),
+                                  onTap: onSearch,
+                                  child: const Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 14),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.search,
+                                            color: AppColors.mainText,
+                                            size: 23),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: HomeSearchHint(),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                  ),
+                                )),
                           ),
                         ),
                       ],

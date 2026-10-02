@@ -11,6 +11,8 @@ import '../../providers/recent_products_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../widgets/product_purchase_sheets.dart';
+import '../widgets/product_credit_sheet.dart';
+import '../widgets/product_service_row.dart';
 import '../widgets/product_description.dart';
 import 'main_screen.dart';
 import 'saved_products_screen.dart';
@@ -20,11 +22,13 @@ import 'service_tradein_screens.dart';
 class ProductDetailScreen extends StatefulWidget {
   final Product productPreview;
   final String? initialOfferId;
+  final bool matchPreviewPrice;
   final ApiService? apiService;
   const ProductDetailScreen(
       {super.key,
       required this.productPreview,
       this.initialOfferId,
+      this.matchPreviewPrice = false,
       this.apiService});
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -42,10 +46,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ProductDetailController(widget.productPreview, api: widget.apiService)
           ..load().then((_) {
             if (!mounted) return;
+            var matched = false;
             for (final offer in _controller.detail?.offers ?? []) {
               if (offer.id ==
                   (widget.initialOfferId ?? widget.productPreview.offerId)) {
                 _controller.selectedOffer = offer;
+                matched = true;
+                break;
+              }
+            }
+            if (widget.matchPreviewPrice &&
+                !matched &&
+                widget.productPreview.price > 0) {
+              for (final offer in _controller.detail?.offers ?? []) {
+                if (offer.price == widget.productPreview.price) {
+                  _controller.selectedOffer = offer;
+                  break;
+                }
               }
             }
             _recordView();
@@ -204,10 +221,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                        c.price > 0
-                                            ? formatPrice(c.price)
-                                            : 'Цена по запросу',
+                                    Text(formatPrice(c.price),
                                         style: const TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w800)),
@@ -223,11 +237,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   onPressed: _purchase,
                                   style: FilledButton.styleFrom(
                                       foregroundColor: AppColors.white,
-                                      minimumSize: const Size(0, 48),
+                                      minimumSize: const Size(0, 42),
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(10))),
                                   child: Text(c.actionLabel));
+                              if (c.price <= 0) return button;
                               if (constraints.maxWidth < 280 ||
                                   MediaQuery.textScalerOf(context).scale(1) >
                                       1.3) {
@@ -242,7 +257,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ]);
                               }
                               return Row(children: [
-                                Expanded(child: price),
+                                Expanded(
+                                    child: Padding(
+                                        padding: const EdgeInsets.only(left: 8),
+                                        child: price)),
                                 const SizedBox(width: 12),
                                 Expanded(child: button)
                               ]);
@@ -283,14 +301,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ? AppColors.primaryText
                             : AppColors.darkAccent)),
               ])),
-      Consumer<CartProvider>(
-          builder: (context, cart, _) => IconButton(
-              tooltip: 'Корзина',
-              onPressed: _openCart,
-              icon: Badge(
-                  isLabelVisible: cart.itemCount > 0,
-                  label: Text('${cart.itemCount}'),
-                  child: const Icon(Icons.shopping_bag_outlined)))),
       const SizedBox(width: 4),
     ];
   }
@@ -448,69 +458,72 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ]),
       ]),
       _panel([
-        Wrap(
-            spacing: 12,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(c.price > 0 ? formatPrice(c.price) : 'Цена по запросу',
+        if (c.price > 0)
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Expanded(
+                child: Text.rich(TextSpan(children: [
+              TextSpan(
+                  text: formatPrice(c.price),
                   style: const TextStyle(
                       fontSize: 26, fontWeight: FontWeight.w800, height: 1.2)),
-              if (c.storePrice > c.price && c.price > 0)
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(formatPrice(c.storePrice),
-                      style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.secondaryText,
-                          decoration: TextDecoration.lineThrough)),
-                  IconButton(
-                      tooltip: 'О ценах',
-                      onPressed: () => showProductInformation(
-                          context,
-                          'Цены',
-                          const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                      color: AppColors.benefit,
-                                      borderRadius:
-                                          BorderRadius.all(Radius.circular(5))),
-                                  child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 5),
-                                      child: Text('АКЦИЯ',
-                                          style: TextStyle(
-                                              color: AppColors.white,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700))),
-                                ),
-                                SizedBox(height: 12),
-                                Text(
-                                    'Цена указана только при оформлении заказа на сайте и оплате наличными средствами.',
-                                    style: TextStyle(
-                                        color: AppColors.secondaryText,
-                                        fontSize: 14,
-                                        height: 1.5)),
-                                Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: Divider(
-                                        height: 1, color: AppColors.border)),
-                                Text('Цена в магазине',
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700)),
-                                SizedBox(height: 8),
-                                Text(
-                                    'Розничная цена при покупке в магазине без оформления заказа на сайте.',
-                                    style: TextStyle(
-                                        color: AppColors.secondaryText,
-                                        fontSize: 14,
-                                        height: 1.5)),
-                              ])),
-                      icon: const Icon(Icons.info_outline, size: 16)),
-                ]),
-            ]),
+              if (c.storePrice > c.price) ...[
+                const TextSpan(text: '   ', style: TextStyle(fontSize: 13)),
+                TextSpan(
+                    text: formatPrice(c.storePrice),
+                    style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.2,
+                        color: AppColors.secondaryText,
+                        decoration: TextDecoration.lineThrough)),
+              ],
+            ]))),
+            if (c.storePrice > c.price)
+              IconButton(
+                  tooltip: 'О ценах',
+                  onPressed: () => showProductInformation(
+                      context,
+                      'Цены',
+                      const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                  color: AppColors.benefit,
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(5))),
+                              child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 5),
+                                  child: Text('АКЦИЯ',
+                                      style: TextStyle(
+                                          color: AppColors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700))),
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                                'Цена указана только при оформлении заказа на сайте и оплате наличными средствами.',
+                                style: TextStyle(
+                                    color: AppColors.secondaryText,
+                                    fontSize: 14,
+                                    height: 1.5)),
+                            Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Divider(
+                                    height: 1, color: AppColors.border)),
+                            Text('Цена в магазине',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w700)),
+                            SizedBox(height: 8),
+                            Text(
+                                'Розничная цена при покупке в магазине без оформления заказа на сайте.',
+                                style: TextStyle(
+                                    color: AppColors.secondaryText,
+                                    fontSize: 14,
+                                    height: 1.5)),
+                          ])),
+                  icon: const Icon(Icons.info_outline, size: 16)),
+          ]),
         if (c.canBuy == true && c.storePrice > c.price && c.price > 0)
           DecoratedBox(
               decoration: BoxDecoration(
@@ -524,34 +537,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.white)))),
-        const SizedBox(height: 8),
+        if (c.price > 0) const SizedBox(height: 8),
         SizedBox(
             width: double.infinity,
             child: FilledButton(
                 onPressed: _purchase,
                 style: FilledButton.styleFrom(
                     foregroundColor: AppColors.white,
-                    minimumSize: const Size(0, 48),
+                    minimumSize: const Size(0, 42),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10))),
                 child: Text(c.action == PurchaseAction.cart
                     ? 'Добавить в корзину'
                     : c.actionLabel))),
-        if (c.price > 0 && c.storePrice > 0)
-          TextButton.icon(
-              onPressed: () => showProductInformation(context, 'Рассрочка',
-                  InstallmentCalculator(price: c.storePrice)),
-              style: TextButton.styleFrom(
-                  foregroundColor: AppColors.installment,
-                  backgroundColor: AppColors.installmentBackground,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10))),
-              icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
-              label: Text(
-                  'Рассрочка от ${formatPrice((c.storePrice / 24).ceil())}/мес.',
-                  style: const TextStyle(fontSize: 13))),
+        if (c.price > 0 && c.storePrice > 0) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+                onPressed: () => showProductCreditSheet(context,
+                    productId: c.id,
+                    productName: c.name,
+                    productUrl: Uri.parse(c.detail!.url)
+                        .replace(
+                            fragment:
+                                c.selectedOffer == null ? '' : 'sku=${c.id}')
+                        .toString(),
+                    price: c.storePrice,
+                    apiService: widget.apiService),
+                style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 42),
+                    foregroundColor: AppColors.installment,
+                    backgroundColor: AppColors.installmentBackground,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10))),
+                icon:
+                    const Icon(Icons.account_balance_wallet_outlined, size: 18),
+                label: Text(
+                    'Рассрочка от ${formatPrice((c.storePrice / 24).ceil())}/мес.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14))),
+          ),
+        ],
         if (detail.promoTiers.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(detail.promoName,
@@ -580,15 +609,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         const Text('Способы получения',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         if (c.canBuy == true)
-          ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: const Icon(Icons.store_outlined, size: 22),
-              title: const Text('Самовывоз в Краснодаре',
-                  style: TextStyle(fontSize: 14)),
-              subtitle: const Text('Наличие уточните перед поездкой',
-                  style: TextStyle(fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right, size: 20),
+          ProductServiceRow(
+              icon: ProductServiceIcon.pickup,
+              title: 'Самовывоз в Краснодаре',
+              subtitle: 'Наличие уточните перед поездкой',
               onTap: () => _navigate(const ContactsScreen()))
         else
           Padding(
@@ -601,30 +625,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           : 'Наличие уточняется у менеджера',
                   style: const TextStyle(
                       fontSize: 13, color: AppColors.secondaryText))),
-        ListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            leading: const Icon(Icons.local_shipping_outlined, size: 22),
-            title: const Text('Доставка и условия',
-                style: TextStyle(fontSize: 14)),
-            trailing: const Icon(Icons.chevron_right, size: 20),
+        if (c.canBuy == true)
+          const Padding(
+              padding: EdgeInsets.only(left: 58),
+              child: Divider(height: 1, thickness: 1, color: AppColors.border)),
+        ProductServiceRow(
+            icon: ProductServiceIcon.delivery,
+            title: 'Доставка и условия',
+            subtitle: 'Подробнее о доставке',
             onTap: () => _navigate(const DeliveryScreen())),
       ]),
       _panel([
-        ListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            leading: const Icon(Icons.verified_user_outlined, size: 22),
-            title: const Text('Гарантия', style: TextStyle(fontSize: 14)),
-            trailing: const Icon(Icons.chevron_right, size: 20),
+        ProductServiceRow(
+            icon: ProductServiceIcon.warranty,
+            title: 'Гарантия',
             onTap: () => _navigate(const WarrantyScreen())),
-        const Divider(height: 1),
-        ListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            leading: const Icon(Icons.swap_horiz, size: 22),
-            title: const Text('Trade-in', style: TextStyle(fontSize: 14)),
-            trailing: const Icon(Icons.chevron_right, size: 20),
+        const Padding(
+            padding: EdgeInsets.only(left: 58),
+            child: Divider(height: 1, thickness: 1, color: AppColors.border)),
+        ProductServiceRow(
+            icon: ProductServiceIcon.tradeIn,
+            title: 'Trade-in',
             onTap: () => _navigate(const TradeInScreen())),
       ]),
       Padding(

@@ -1,3 +1,5 @@
+import '../../features/account/ui/account_menu_tile.dart';
+import '../../features/account/ui/account_session.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -77,6 +79,7 @@ class _BurgerMenuState extends State<BurgerMenu> {
 
   @override
   Widget build(BuildContext context) {
+    final authorized = context.watch<AccountSession?>()?.authorized ?? false;
     final drawerWidth = MediaQuery.sizeOf(context).width * 0.85;
     return Drawer(
       width: drawerWidth > 320 ? 320 : drawerWidth,
@@ -223,63 +226,57 @@ class _BurgerMenuState extends State<BurgerMenu> {
                         },
                       ),
 
-                      const Divider(height: 24, indent: 16, endIndent: 16),
+                      const Divider(
+                          height: 24,
+                          thickness: 1,
+                          indent: 16,
+                          endIndent: 16,
+                          color: AppColors.border),
 
-                      // Покупателям (раскрывается)
-                      InkWell(
-                        onTap: () =>
-                            setState(() => _buyerExpanded = !_buyerExpanded),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () =>
+                              setState(() => _buyerExpanded = !_buyerExpanded),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 14),
+                            child: Row(children: [
+                              const Expanded(
+                                  child: Text('Покупателям',
+                                      style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.mainText))),
                               Icon(
-                                _buyerExpanded
-                                    ? Icons.keyboard_arrow_down_rounded
-                                    : Icons.keyboard_arrow_right_rounded,
-                                color: AppColors.primaryAccent,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('Покупателям',
-                                  style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.mainText)),
-                            ],
+                                  _buyerExpanded
+                                      ? Icons.keyboard_arrow_down_rounded
+                                      : Icons.keyboard_arrow_right_rounded,
+                                  color: AppColors.primaryText,
+                                  size: 22),
+                            ]),
                           ),
                         ),
                       ),
-
                       if (_buyerExpanded)
-                        Container(
-                          color: const Color(0xFFF8F9FA),
-                          child: Column(
-                            children: _buyerItems.map((item) {
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  _openNativeScreen(item.screenType);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 14),
-                                  child: Row(
-                                    children: [
-                                      Icon(item.icon,
-                                          size: 18,
-                                          color: AppColors.secondaryText),
-                                      const SizedBox(width: 12),
-                                      Text(item.label,
-                                          style: const TextStyle(
-                                              fontSize: 14,
-                                              color: AppColors.mainText)),
-                                    ],
-                                  ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
+                          child: AccountSectionCard(
+                            child: Column(children: [
+                              for (var i = 0; i < _buyerItems.length; i++) ...[
+                                if (i > 0) const AccountMenuDivider(),
+                                AccountMenuTile(
+                                  icon: _buyerItems[i].icon,
+                                  title: _buyerItems[i].label,
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    _openNativeScreen(
+                                        _buyerItems[i].screenType);
+                                  },
                                 ),
-                              );
-                            }).toList(),
+                              ],
+                            ]),
                           ),
                         ),
 
@@ -289,29 +286,32 @@ class _BurgerMenuState extends State<BurgerMenu> {
                 ),
 
                 // ── Войти (прилипает внизу) ───────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        // TODO: переход на экран авторизации
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryAccent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                if (!authorized)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          final main = MainScreen.of(context);
+                          Navigator.of(context).pop();
+                          main?.switchToTab(MainScreen.profileTab);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(0, 42),
+                          backgroundColor: AppColors.primaryAccent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.login, size: 20),
+                        label: const Text('Войти',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
-                      icon: const Icon(Icons.login, size: 20),
-                      label: const Text('Войти',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
-                ),
               ],
             ),
           ),
