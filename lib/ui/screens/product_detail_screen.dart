@@ -216,7 +216,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               final button = FilledButton(
                                   onPressed: _purchase,
                                   style: FilledButton.styleFrom(
-                                      foregroundColor: AppColors.onPrimary,
+                                      foregroundColor: AppColors.white,
                                       minimumSize: const Size(0, 48),
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
@@ -477,7 +477,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: FilledButton(
                 onPressed: _purchase,
                 style: FilledButton.styleFrom(
-                    foregroundColor: AppColors.onPrimary,
+                    foregroundColor: AppColors.white,
                     minimumSize: const Size(0, 48),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10))),

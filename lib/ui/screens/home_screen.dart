@@ -346,7 +346,9 @@ class _NewsSection extends StatelessWidget {
               ),
             ),
             SizedBox(
-              height: MediaQuery.sizeOf(context).width * 0.72 / 2.1 + 110,
+              height:
+                  (MediaQuery.sizeOf(context).width * 0.72 - 12) / (16 / 9) +
+                      116,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -394,11 +396,11 @@ class _NewsCard extends StatelessWidget {
           children: [
             // Широкое превью, как в мобильной ленте сайта.
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: AspectRatio(
-                  aspectRatio: 2.1,
+                  aspectRatio: 16 / 9,
                   child: item.image.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: item.image,
