@@ -15,8 +15,9 @@ const catalogSortLabels = {
 };
 
 class CatalogProductsView extends StatelessWidget {
-  const CatalogProductsView({super.key, required this.provider});
+  const CatalogProductsView({super.key, required this.provider, this.onBack});
   final ProductProvider provider;
+  final VoidCallback? onBack;
   @override
   Widget build(BuildContext context) {
     final products = provider.products;
@@ -29,7 +30,7 @@ class CatalogProductsView extends StatelessWidget {
               child: Row(children: [
                 IconButton(
                     tooltip: 'Вернуться к разделам',
-                    onPressed: provider.goBack,
+                    onPressed: onBack ?? provider.goBack,
                     icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
                 Expanded(
                     child: Text(provider.sectionTitle,

@@ -56,7 +56,6 @@ class ProductPreviewCard extends StatelessWidget {
                     SizedBox(
                         height: catalogLayout ? 48 : 40,
                         child: Row(children: [
-                          if (product.ruStoreWarning) _ruStore(context),
                           const Spacer(),
                           _savedActions(context),
                         ])),
@@ -65,7 +64,8 @@ class ProductPreviewCard extends StatelessWidget {
                       Padding(
                           key: ValueKey(
                               'preview-image-${product.offerId ?? product.id}'),
-                          padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                          padding: EdgeInsets.fromLTRB(
+                              10, 0, product.ruStoreWarning ? 30 : 10, 10),
                           child: product.image.isNotEmpty
                               ? CachedNetworkImage(
                                   imageUrl: product.image,
@@ -76,6 +76,9 @@ class ProductPreviewCard extends StatelessWidget {
                                       color: AppColors.secondaryText))
                               : const Icon(Icons.image_outlined,
                                   color: AppColors.secondaryText)),
+                      if (product.ruStoreWarning)
+                        Positioned(
+                            bottom: 0, right: 0, child: _ruStore(context)),
                       if (badge.isNotEmpty)
                         Positioned(
                             top: 4,
@@ -203,26 +206,29 @@ class ProductPreviewCard extends StatelessWidget {
           style: const TextStyle(
               fontSize: 12, height: 1.25, color: AppColors.mainText)));
   Widget _ruStore(BuildContext context) => IconButton(
-      alignment: catalogLayout ? Alignment.center : Alignment.bottomCenter,
-      padding: catalogLayout
-          ? const EdgeInsets.all(8)
-          : const EdgeInsets.fromLTRB(8, 8, 8, 6),
+      alignment: Alignment.bottomRight,
+      padding: const EdgeInsets.all(6),
       tooltip: 'Без RuStore',
       onPressed: () => showProductInformation(
           context,
           'Без RuStore',
           const Text(
               'В товаре имеется недостаток: RuStore недоступен на устройствах Apple')),
-      icon: const Icon(Icons.app_blocking_outlined,
-          size: 20, color: Color(0xFF007AC1)));
+      icon: const DecoratedBox(
+          decoration: BoxDecoration(
+              color: Color(0xFF007AC1),
+              borderRadius: BorderRadius.all(Radius.circular(4))),
+          child: Padding(
+              padding: EdgeInsets.all(2),
+              child: Icon(Icons.app_blocking_outlined,
+                  size: 17, color: Colors.white))));
   Widget _savedActions(BuildContext context) =>
       Consumer<SavedProductsProvider>(builder: (context, saved, _) {
         final id = product.offerId ?? product.id;
         final item = SavedProduct(product, id, product.specs);
         return Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
-              alignment:
-                  catalogLayout ? Alignment.center : Alignment.bottomCenter,
+              alignment: Alignment.center,
               padding: catalogLayout
                   ? const EdgeInsets.all(8)
                   : const EdgeInsets.fromLTRB(8, 8, 8, 6),
@@ -237,20 +243,6 @@ class ProductPreviewCard extends StatelessWidget {
                   size: 21,
                   color: saved.favorites.containsKey(id)
                       ? Colors.red
-                      : AppColors.secondaryText)),
-          IconButton(
-              alignment:
-                  catalogLayout ? Alignment.center : Alignment.bottomCenter,
-              padding: catalogLayout
-                  ? const EdgeInsets.all(8)
-                  : const EdgeInsets.fromLTRB(8, 8, 8, 6),
-              tooltip: 'Сравнение товаров',
-              onPressed:
-                  saved.ready ? () => saved.toggle(item, compare: true) : null,
-              icon: Icon(Icons.bar_chart,
-                  size: 21,
-                  color: saved.comparison.containsKey(id)
-                      ? AppColors.primaryText
                       : AppColors.secondaryText)),
         ]);
       });

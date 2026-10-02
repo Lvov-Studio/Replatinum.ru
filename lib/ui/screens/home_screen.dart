@@ -11,7 +11,7 @@ import '../../data/models/news_model.dart';
 import '../../core/theme/app_colors.dart';
 
 import '../widgets/sliver_home_header.dart';
-import '../widgets/home_product_carousel.dart';
+import '../widgets/home_showcase_carousel.dart';
 import '../widgets/recent_products_strip.dart';
 import '../widgets/banner_slider.dart';
 import 'product_search_delegate.dart';
@@ -129,24 +129,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const _CategoriesRow(),
                   const SizedBox(height: 2),
-                  HomeProductCarousel(
+                  HomeShowcaseCarousel(
                     title: 'Акции',
+                    type: 'sale',
                     badge: 'АКЦИЯ',
-                    badgeColor: const Color(0xFFE53935),
                     future: _saleFuture,
                     onRetry: () => _retryProducts('sale'),
                   ),
-                  HomeProductCarousel(
+                  HomeShowcaseCarousel(
                     title: 'Новинки',
-                    badge: 'НОВИНКА',
-                    badgeColor: const Color(0xFFFF9800),
+                    type: 'new',
+                    badge: 'Новинка',
                     future: _newFuture,
                     onRetry: () => _retryProducts('new'),
                   ),
-                  HomeProductCarousel(
+                  HomeShowcaseCarousel(
                     title: 'Хиты продаж',
-                    badge: 'ХИТ ПРОДАЖ',
-                    badgeColor: AppColors.primaryAccent,
+                    type: 'hit',
+                    badge: 'Хит',
                     future: _hitFuture,
                     onRetry: () => _retryProducts('hit'),
                   ),

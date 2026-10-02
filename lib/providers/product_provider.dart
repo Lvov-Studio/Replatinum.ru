@@ -20,7 +20,14 @@ class ProductProvider extends ChangeNotifier {
           .toList();
   bool get browsing => _browsing && subsections.isNotEmpty;
   String get sectionTitle =>
-      _subsectionTitle ?? _selectedCategory?.name ?? 'Каталог';
+      _subsectionTitle ??
+      _selectedCategory?.name ??
+      switch (_type) {
+        'hit' => 'Хиты продаж',
+        'new' => 'Новинки',
+        'sale' => 'Акции',
+        _ => 'Каталог',
+      };
   Iterable<CatalogItem> get _baseItems =>
       _items.where((item) => _path == null || item.path.startsWith(_path!));
   List<CatalogNode> childrenOf(CatalogNode node) => node.children
@@ -211,5 +218,11 @@ class ProductProvider extends ChangeNotifier {
     _sort = CatalogSort.original;
     _visible = 20;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _requestId++;
+    super.dispose();
   }
 }
