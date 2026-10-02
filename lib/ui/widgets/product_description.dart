@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../core/utils/product_description_document.dart';
 
@@ -21,6 +22,7 @@ class ProductDescription extends StatefulWidget {
 
 class _ProductDescriptionState extends State<ProductDescription> {
   bool _expanded = false;
+  double _styledHeight = 240;
   @override
   Widget build(BuildContext context) {
     // Simple descriptions stay native; styled storefront blocks need full CSS.
@@ -28,7 +30,15 @@ class _ProductDescriptionState extends State<ProductDescription> {
         RegExp(r'<style\b', caseSensitive: false).hasMatch(widget.html);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (styled)
-        SizedBox(height: 240, child: _StyledDescriptionView(html: widget.html))
+        SizedBox(
+            height: _expanded ? _styledHeight : 240,
+            child: _StyledDescriptionView(
+                html: widget.html,
+                onHeight: (height) {
+                  if (mounted && (height - _styledHeight).abs() > 1) {
+                    setState(() => _styledHeight = height);
+                  }
+                }))
       else
         ClipRect(
             child: ConstrainedBox(
@@ -47,29 +57,18 @@ class _ProductDescriptionState extends State<ProductDescription> {
                               lineHeight: const LineHeight(1.5))
                         })))),
       TextButton.icon(
-          onPressed: () {
-            if (styled) {
-              Navigator.of(context).push(MaterialPageRoute<void>(
-                  builder: (_) => Scaffold(
-                      appBar: AppBar(title: const Text('Описание')),
-                      body: SafeArea(
-                          child: _StyledDescriptionView(
-                              html: widget.html, scrollable: true)))));
-            } else {
-              setState(() => _expanded = !_expanded);
-            }
-          },
+          onPressed: () => setState(() => _expanded = !_expanded),
           icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
           label: Text(_expanded ? 'Свернуть' : 'Подробнее')),
     ]);
   }
 }
 
-/// A bounded viewport avoids oversized Android WebView render surfaces.
+/// Styled HTML shares the product page's scroll; its height follows the content.
 class _StyledDescriptionView extends StatefulWidget {
   final String html;
-  final bool scrollable;
-  const _StyledDescriptionView({required this.html, this.scrollable = false});
+  final ValueChanged<double> onHeight;
+  const _StyledDescriptionView({required this.html, required this.onHeight});
   @override
   State<_StyledDescriptionView> createState() => _StyledDescriptionViewState();
 }
@@ -83,10 +82,28 @@ class _StyledDescriptionViewState extends State<_StyledDescriptionView> {
     super.initState();
     _web = WebViewController()
       ..setBackgroundColor(Colors.white)
-      ..setJavaScriptMode(JavaScriptMode.disabled)
+      // Product scripts/handlers are stripped and CSP blocks page scripts.
+      // Only our injected observer measures layout after images finish loading.
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel('DescriptionHeight', onMessageReceived: (message) {
+        final height = double.tryParse(message.message);
+        if (mounted && height != null && height.isFinite && height > 0) {
+          widget.onHeight(height.ceilToDouble());
+        }
+      })
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) {
-          if (mounted) setState(() => _loading = false);
+          if (!mounted) return;
+          setState(() => _loading = false);
+          _web.runJavaScript('''
+            (() => {
+              const content = document.getElementById('description-content');
+              if (!content) return;
+              const report = () => DescriptionHeight.postMessage(String(Math.ceil(content.getBoundingClientRect().height)));
+              new ResizeObserver(report).observe(content);
+              report();
+            })();
+          ''');
         },
         onNavigationRequest: (request) {
           if (_loading &&
@@ -110,8 +127,7 @@ class _StyledDescriptionViewState extends State<_StyledDescriptionView> {
   }
 
   void _load() {
-    _web.loadHtmlString(
-        productDescriptionDocument(widget.html, scrollable: widget.scrollable),
+    _web.loadHtmlString(productDescriptionDocument(widget.html),
         baseUrl: 'https://replatinum.ru/');
   }
 
@@ -133,7 +149,13 @@ class _StyledDescriptionViewState extends State<_StyledDescriptionView> {
       ]));
     }
     return Stack(children: [
-      Positioned.fill(child: WebViewWidget(controller: _web)),
+      Positioned.fill(
+          child: WebViewWidget.fromPlatformCreationParams(
+        params: _web.platform is AndroidWebViewController
+            ? AndroidWebViewWidgetCreationParams(
+                controller: _web.platform, displayWithHybridComposition: true)
+            : PlatformWebViewWidgetCreationParams(controller: _web.platform),
+      )),
       if (_loading)
         const Positioned.fill(
             child: ColoredBox(

@@ -80,9 +80,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     context
         .read<CartProvider>()
         .addItem(_controller.cartProduct, offer: _controller.selectedOffer);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Добавлено в корзину'),
-        action: SnackBarAction(label: 'Открыть', onPressed: _openCart)));
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(
+          persist: false,
+          duration: const Duration(seconds: 2),
+          content: const Text('Добавлено в корзину'),
+          action: SnackBarAction(label: 'Открыть', onPressed: _openCart)));
   }
 
   void _select(String code, String value) {

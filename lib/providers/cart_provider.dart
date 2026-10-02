@@ -32,6 +32,7 @@ class CartItem {
 
 class CartProvider extends ChangeNotifier {
   final Map<String, CartItem> _items = {};
+  final Set<String> _excluded = {};
   final Future<CartQuote> Function(List<Map<String, dynamic>>) _quoteLoader;
   CartQuote? _quote;
   int _revision = 0;
@@ -45,14 +46,40 @@ class CartProvider extends ChangeNotifier {
   CartQuote? get quote => _quote;
   bool get checking => _checking;
   String get quoteError => _quoteError;
-  bool get canCheckout => _items.isNotEmpty && _quote != null && !_checking;
+  bool get canCheckout =>
+      selectedItems.isNotEmpty && _quote != null && !_checking;
+  List<CartItem> get selectedItems =>
+      _items.values.where((item) => isSelected(item.key)).toList();
+  bool isSelected(String key) => !_excluded.contains(key);
+  bool get allSelected => _items.isNotEmpty && _excluded.isEmpty;
+  int get selectedCount =>
+      selectedItems.fold(0, (count, item) => count + item.quantity);
+  void selectItem(String key, bool selected) {
+    if (!_items.containsKey(key)) return;
+    selected ? _excluded.remove(key) : _excluded.add(key);
+    _changed();
+  }
+
+  void selectAll(bool selected) {
+    _excluded.clear();
+    if (!selected) _excluded.addAll(_items.keys);
+    _changed();
+  }
+
+  void removeSelected() {
+    for (final item in selectedItems) {
+      _items.remove(item.key);
+    }
+    _changed();
+  }
+
   num get discountAmount => (_quote?.discountMinor ?? 0) / 100;
   num get subtotal =>
       _quote != null ? _quote!.subtotalMinor / 100 : _localTotal;
   num priceFor(CartItem item) =>
       _quote?.unitPrices[item.catalogId] ?? item.unitPrice;
   List<Map<String, dynamic>> get orderItems => [
-        for (final item in _items.values)
+        for (final item in selectedItems)
           {'id': int.tryParse(item.catalogId) ?? 0, 'quantity': item.quantity}
       ];
 
@@ -60,7 +87,7 @@ class CartProvider extends ChangeNotifier {
     final revision = ++_revision;
     _quote = null;
     _quoteError = '';
-    if (_items.isEmpty) {
+    if (selectedItems.isEmpty) {
       _checking = false;
       notifyListeners();
       return false;
@@ -106,9 +133,9 @@ class CartProvider extends ChangeNotifier {
 
   double get _localTotal {
     var total = 0.0;
-    _items.forEach((key, item) {
+    for (final item in selectedItems) {
       total += item.unitPrice * item.quantity;
-    });
+    }
     return total;
   }
 
@@ -117,6 +144,7 @@ class CartProvider extends ChangeNotifier {
     if (item.unitPrice <= 0 || (offer?.canBuy ?? product.canBuy) == false) {
       return;
     }
+    _excluded.remove(item.key);
     if (_items.containsKey(item.key)) {
       _items.update(
         item.key,
@@ -135,6 +163,7 @@ class CartProvider extends ChangeNotifier {
 
   void removeItem(String itemKey) {
     _items.remove(itemKey);
+    _excluded.remove(itemKey);
     _changed();
   }
 
@@ -162,12 +191,14 @@ class CartProvider extends ChangeNotifier {
       );
     } else {
       _items.remove(itemKey);
+      _excluded.remove(itemKey);
     }
     _changed();
   }
 
   void clear() {
     _items.clear();
+    _excluded.clear();
     _changed();
   }
 }

@@ -58,7 +58,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
       );
 
       if (success && mounted) {
-        cartProvider.clear();
+        cartProvider.removeSelected();
         Navigator.pop(context, true);
       }
     } catch (e) {

@@ -1,0 +1,10 @@
+--- a/public/local/api/mobile/v1/get_product_detail.php
++++ b/public/local/api/mobile/v1/get_product_detail.php
+@@ -129,6 +129,7 @@
+             }
+         }
+     }
++    $data['basket_accessory_ids'] = array_values(array_map('strval', array_filter(array_map('intval', (array)($props['BASKET_ITEM_ACCESSORIES']['VALUE'] ?? [])), function($v) { return $v > 0; })));
+     $data['currency'] = 'RUB';
+     $data['schema_version'] = 2;
+     echo json_encode(['status'=>'success','data'=>$data], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);

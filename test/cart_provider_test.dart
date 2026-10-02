@@ -16,6 +16,34 @@ CartQuote quote(String id, int total, {int discount = 0}) => CartQuote(
 
 void main() {
   group('CartProvider', () {
+    test(
+        'selection affects quote and checkout; submitted items alone are removed',
+        () async {
+      List<Map<String, dynamic>>? submitted;
+      final cart = CartProvider(quoteLoader: (items) async {
+        submitted = items;
+        return quote('selected', 100000);
+      });
+      cart.addItem(product('1'));
+      cart.addItem(product('2'));
+      cart.selectItem('2:base', false);
+      await Future<void>.delayed(Duration.zero);
+      expect(submitted!.single['id'], 1);
+      expect(cart.selectedCount, 1);
+      expect(cart.itemCount, 2);
+      expect(cart.canCheckout, isTrue);
+      cart.removeSelected();
+      expect(cart.items.keys, ['2:base']);
+      expect(cart.selectedItems, isEmpty);
+      expect(cart.canCheckout, isFalse);
+      expect(cart.totalAmount, 0);
+      cart.selectAll(true);
+      await Future<void>.delayed(Duration.zero);
+      expect(cart.canCheckout, isTrue);
+      cart.selectAll(false);
+      expect(cart.quote, isNull);
+      expect(cart.canCheckout, isFalse);
+    });
     test('should submit the selected preview SKU instead of its parent',
         () async {
       List<Map<String, dynamic>>? submitted;

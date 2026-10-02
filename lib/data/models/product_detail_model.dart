@@ -92,6 +92,7 @@ class ProductDetail {
   final List<Offer> offers;
   final List<ProductSpec> specs;
   final List<(int, num)> promoTiers;
+  final List<String> basketAccessoryIds;
   const ProductDetail(
       {required this.id,
       required this.name,
@@ -105,7 +106,8 @@ class ProductDetail {
       this.ruStoreWarning = false,
       this.specs = const [],
       this.promoName = '',
-      this.promoTiers = const []});
+      this.promoTiers = const [],
+      this.basketAccessoryIds = const []});
   factory ProductDetail.fromJson(Map<String, dynamic> j) {
     final images = parseImages(j['images']);
     if (images.isEmpty && '${j['image'] ?? ''}'.isNotEmpty) {
@@ -128,6 +130,7 @@ class ProductDetail {
                 .toList()
             : [],
         specs: parseSpecs(j['specs']),
+        basketAccessoryIds: parseImages(j['basket_accessory_ids']),
         promoName: '${promo['name'] ?? ''}',
         promoTiers: promo['tiers'] is List
             ? (promo['tiers'] as List)

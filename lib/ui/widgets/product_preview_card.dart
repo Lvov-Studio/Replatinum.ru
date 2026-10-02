@@ -159,9 +159,12 @@ class ProductPreviewCard extends StatelessWidget {
                         onPressed: () {
                           if (canBuy) {
                             context.read<CartProvider>().addItem(product);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Товар добавлен в корзину')));
+                            ScaffoldMessenger.of(context)
+                              ..clearSnackBars()
+                              ..showSnackBar(const SnackBar(
+                                  persist: false,
+                                  duration: Duration(seconds: 2),
+                                  content: Text('Товар добавлен в корзину')));
                           } else {
                             _open(context);
                           }
