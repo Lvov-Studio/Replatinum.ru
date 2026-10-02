@@ -463,9 +463,47 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       tooltip: 'О ценах',
                       onPressed: () => showProductInformation(
                           context,
-                          'О ценах',
-                          const Text(
-                              'Цена на сайте — при оформлении заказа на сайте и оплате наличными. Цена в магазине — розничная цена без оформления заказа на сайте.')),
+                          'Цены',
+                          const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                      color: AppColors.benefit,
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(5))),
+                                  child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 5),
+                                      child: Text('АКЦИЯ',
+                                          style: TextStyle(
+                                              color: AppColors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700))),
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                    'Цена указана только при оформлении заказа на сайте и оплате наличными средствами.',
+                                    style: TextStyle(
+                                        color: AppColors.secondaryText,
+                                        fontSize: 14,
+                                        height: 1.5)),
+                                Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Divider(
+                                        height: 1, color: AppColors.border)),
+                                Text('Цена в магазине',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700)),
+                                SizedBox(height: 8),
+                                Text(
+                                    'Розничная цена при покупке в магазине без оформления заказа на сайте.',
+                                    style: TextStyle(
+                                        color: AppColors.secondaryText,
+                                        fontSize: 14,
+                                        height: 1.5)),
+                              ])),
                       icon: const Icon(Icons.info_outline, size: 16)),
                 ]),
             ]),
