@@ -470,9 +470,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ]),
             ]),
         if (c.canBuy == true && c.storePrice > c.price && c.price > 0)
-          Text('Выгода ${formatPrice(c.storePrice - c.price)}',
-              style:
-                  const TextStyle(fontSize: 12, color: AppColors.primaryText)),
+          DecoratedBox(
+              decoration: BoxDecoration(
+                  color: AppColors.benefit,
+                  borderRadius: BorderRadius.circular(5)),
+              child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Text('Выгода ${formatPrice(c.storePrice - c.price)}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.white)))),
         const SizedBox(height: 8),
         SizedBox(
             width: double.infinity,
@@ -491,8 +500,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               onPressed: () => showProductInformation(context, 'Рассрочка',
                   InstallmentCalculator(price: c.storePrice)),
               style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primaryText,
-                  padding: EdgeInsets.zero),
+                  foregroundColor: AppColors.installment,
+                  backgroundColor: AppColors.installmentBackground,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10))),
               icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
               label: Text(
                   'Рассрочка от ${formatPrice((c.storePrice / 24).ceil())}/мес.',

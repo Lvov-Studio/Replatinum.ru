@@ -13,4 +13,7 @@ class AppColors {
   static const Color border = Color(0xFFE9ECEF);
   static const Color white = Colors.white;
   static const Color error = Color(0xFFB3261E);
+  static const Color benefit = Color(0xFFE84118);
+  static const Color installment = Color(0xFFE74C3C);
+  static const Color installmentBackground = Color(0xFFFFF1F1);
 }
