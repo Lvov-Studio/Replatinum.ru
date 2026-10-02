@@ -64,7 +64,7 @@ void main() {
         expect(tester.getTopLeft(first).dx, 10);
         final cardWidth = tester.getSize(first).width;
         if (scale == 1) {
-          final imageHeight = (cardWidth < 190 ? cardWidth * .85 : 170) + 48;
+          final imageHeight = (cardWidth < 190 ? cardWidth * .85 : 170) + 40;
           expect(tester.getSize(first).height, closeTo(imageHeight + 126, .1));
         }
         expect(

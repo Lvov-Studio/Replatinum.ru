@@ -11,7 +11,7 @@ class _SectionHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 16, 10, 12),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       child: Text(title, style: Theme.of(context).textTheme.titleLarge),
     );
   }
@@ -140,7 +140,7 @@ class _HomeProductCarouselState extends State<HomeProductCarousel> {
 
         final screenW = MediaQuery.of(context).size.width;
         final cardWidth = (screenW - 30) / 2;
-        final imageHeight = (cardWidth < 190 ? cardWidth * 0.85 : 170.0) + 48;
+        final imageHeight = (cardWidth < 190 ? cardWidth * 0.85 : 170.0) + 40;
         final scale = MediaQuery.textScalerOf(context).scale(1);
         final cardH = imageHeight + 126 + (scale - 1).clamp(0, 3) * 55;
 

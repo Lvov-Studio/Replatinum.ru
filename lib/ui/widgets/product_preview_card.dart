@@ -54,7 +54,7 @@ class ProductPreviewCard extends StatelessWidget {
                   clipBehavior: Clip.antiAlias,
                   child: Column(children: [
                     SizedBox(
-                        height: 48,
+                        height: catalogLayout ? 48 : 40,
                         child: Row(children: [
                           if (product.ruStoreWarning) _ruStore(context),
                           const Spacer(),

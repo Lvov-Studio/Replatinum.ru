@@ -24,7 +24,7 @@ class _EmptyCartViewState extends State<EmptyCartView> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 36),
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
             child: Column(children: [
               const Text('В корзине пока ничего нет',
                   textAlign: TextAlign.center,
@@ -61,7 +61,7 @@ class _EmptyCartViewState extends State<EmptyCartView> {
               future: _hits,
               onRetry: () =>
                   setState(() => _hits = _api.getHomeProducts('hit'))),
-          const SizedBox(height: 16),
+      const SizedBox(height: 8),
           HomeProductCarousel(
               title: 'Новинки',
               badge: 'НОВИНКА',
