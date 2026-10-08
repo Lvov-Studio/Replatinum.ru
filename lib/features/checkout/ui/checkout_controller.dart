@@ -50,7 +50,10 @@ class CheckoutController extends ChangeNotifier {
       stores = (data['pickup_stores'] as List)
           .map((row) => Map<String, dynamic>.from(row))
           .toList();
-      profile = Map<String, dynamic>.from(data['profile'] as Map? ?? {});
+      // PHP serializes an empty guest profile as [], not as a JSON object.
+      profile = data['profile'] is Map
+          ? Map<String, dynamic>.from(data['profile'])
+          : {};
       if (_pendingPayload != null) profile.addAll(_pendingPayload!);
       ready = true;
     } catch (failure) {

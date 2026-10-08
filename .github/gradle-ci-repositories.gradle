@@ -1,0 +1,9 @@
+// Flutter's included Gradle build resolves plugins separately from the app.
+// Include Maven Central for Kotlin dependencies of Plugin Portal plugins.
+beforeSettings { settings ->
+    settings.pluginManagement.repositories {
+        mavenCentral()
+        google()
+        gradlePluginPortal()
+    }
+}

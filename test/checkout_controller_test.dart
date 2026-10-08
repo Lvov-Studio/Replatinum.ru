@@ -10,7 +10,7 @@ import 'package:platinumstore_app/providers/cart_provider.dart';
 class CheckoutFixture implements CheckoutGateway {
   final sent = <Map<String, dynamic>>[];
   bool authorized = false;
-  Map<String, dynamic> profile = {};
+  dynamic profile = <String, dynamic>{};
   Future<Map<String, dynamic>> Function()? respond;
   @override
   Future<Map<String, dynamic>> context() async => {
@@ -72,6 +72,17 @@ void main() {
     tearDown(() {
       controller.dispose();
       cart.dispose();
+    });
+
+    test('should open checkout with the live PHP empty guest profile array',
+        () async {
+      gateway.profile = [];
+      await controller.initialize();
+      expect(controller.ready, isTrue);
+      expect(controller.profile, isEmpty);
+      expect(controller.error, isEmpty);
+      expect(controller.authorized, isFalse);
+      expect(controller.stores, hasLength(2));
     });
 
     test('should reject incomplete phone, blank name and unavailable store',
