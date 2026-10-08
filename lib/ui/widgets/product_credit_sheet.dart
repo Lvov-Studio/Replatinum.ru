@@ -85,7 +85,8 @@ class _ProductCreditSheetState extends State<ProductCreditSheet> {
             canPop: !c.sending,
             child: SingleChildScrollView(
                 padding: EdgeInsets.only(
-                    bottom: MediaQuery.viewInsetsOf(context).bottom),
+                    bottom: MediaQuery.viewInsetsOf(context).bottom +
+                        MediaQuery.paddingOf(context).bottom),
                 child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,

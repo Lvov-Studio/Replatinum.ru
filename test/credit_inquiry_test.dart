@@ -31,6 +31,32 @@ class CreditApi extends ApiService {
 
 void main() {
   group('Credit inquiry', () {
+    testWidgets('should keep the application button above Android navigation',
+        (tester) async {
+      tester.view.physicalSize = const Size(720, 1280);
+      tester.view.devicePixelRatio = 2;
+      tester.view.padding = const FakeViewPadding(bottom: 96);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Builder(builder: (context) => Scaffold(
+              body: TextButton(
+                  onPressed: () => showProductCreditSheet(context,
+                      productId: '1713',
+                      productName: 'Смартфон Apple iPhone 18 Pro 256 ГБ',
+                      productUrl: '',
+                      price: 144090,
+                      apiService: CreditApi()),
+                  child: const Text('Открыть'))))));
+      await tester.tap(find.text('Открыть'));
+      await tester.pumpAndSettle();
+      final scroll = find.byType(SingleChildScrollView);
+      await tester.drag(scroll, const Offset(0, -1800));
+      await tester.pumpAndSettle();
+      final button = find.widgetWithText(FilledButton, 'Оформить заявку');
+      expect(tester.getBottomRight(button).dy, lessThanOrEqualTo(640 - 48));
+      expect(tester.takeException(), isNull);
+    });
     test('should submit website credit fields and require explicit acceptance',
         () async {
       final dio = Dio();
