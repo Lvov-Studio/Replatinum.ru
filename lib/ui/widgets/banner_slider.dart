@@ -10,6 +10,7 @@ import '../../data/banner_destination.dart';
 import '../screens/banner_catalog_screen.dart';
 import '../screens/info_screens.dart';
 import '../screens/main_screen.dart';
+import '../screens/news_screen.dart';
 
 class BannerSlider extends StatefulWidget {
   const BannerSlider({super.key, this.apiService});
@@ -56,6 +57,11 @@ class _BannerSliderState extends State<BannerSlider> {
               builder: (_) => BannerCatalogScreen(
                   destination: destination, apiService: _apiService)));
         }
+      } else if (destination.kind == BannerDestinationKind.news) {
+        final code = articleCode(destination.uri);
+        await Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) =>
+                code == null ? const NewsScreen() : ArticleScreen(code: code)));
       } else {
         final opened = await launchUrl(destination.uri,
             mode: LaunchMode.externalApplication);

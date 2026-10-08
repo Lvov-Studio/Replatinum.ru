@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'news_screen.dart';
 import '../../providers/category_provider.dart';
 
 import '../../data/api/api_service.dart';
@@ -331,13 +331,9 @@ class _NewsSection extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           color: AppColors.mainText)),
                   TextButton(
-                    onPressed: () async {
-                      final uri = Uri.parse('https://replatinum.ru/news/');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
-                      }
-                    },
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                            builder: (_) => const NewsScreen())),
                     child: const Text('Все статьи →',
                         style: TextStyle(
                             color: AppColors.primaryAccent, fontSize: 13)),
@@ -373,12 +369,8 @@ class _NewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () async {
-        final uri = Uri.parse('https://replatinum.ru${item.url}');
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      },
+      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => ArticleScreen(code: item.code, initial: item))),
       child: Container(
         width: MediaQuery.sizeOf(context).width * 0.72,
         decoration: BoxDecoration(

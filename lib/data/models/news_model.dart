@@ -1,4 +1,5 @@
 class NewsItem {
+  final String body;
   final String id;
   final String title;
   final String code;
@@ -9,6 +10,7 @@ class NewsItem {
   final String url;
 
   const NewsItem({
+    this.body = '',
     required this.id,
     required this.title,
     required this.code,
@@ -20,6 +22,7 @@ class NewsItem {
   });
 
   factory NewsItem.fromJson(Map<String, dynamic> json) => NewsItem(
+        body: json['body']?.toString() ?? '',
         id: json['id']?.toString() ?? '',
         title: json['title']?.toString() ?? '',
         code: json['code']?.toString() ?? '',
@@ -29,4 +32,10 @@ class NewsItem {
         category: json['category']?.toString() ?? 'СТАТЬЯ',
         url: json['url']?.toString() ?? '',
       );
+}
+
+class NewsPage {
+  const NewsPage(this.items, this.hasMore);
+  final List<NewsItem> items;
+  final bool hasMore;
 }

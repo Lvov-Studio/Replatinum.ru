@@ -89,7 +89,7 @@ void main() {
       expect(BannerDestination.resolve(banner('/catalog/'))!.kind,
           BannerDestinationKind.catalog);
       expect(BannerDestination.resolve(banner('/news/', id: '2509'))!.kind,
-          BannerDestinationKind.website);
+          BannerDestinationKind.news);
     });
     test('should retain unknown site links and reject invalid destinations',
         () {

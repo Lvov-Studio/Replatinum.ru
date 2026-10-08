@@ -1,7 +1,7 @@
 import 'catalog_navigation.dart';
 import 'models/banner_model.dart';
 
-enum BannerDestinationKind { catalog, newStore, website }
+enum BannerDestinationKind { catalog, newStore, news, website }
 
 class BannerDestination {
   const BannerDestination(this.kind, this.uri,
@@ -14,6 +14,7 @@ class BannerDestination {
 
   String get actionLabel => switch (kind) {
         BannerDestinationKind.newStore => 'О магазине',
+        BannerDestinationKind.news => 'Читать',
         BannerDestinationKind.catalog =>
           section == null ? 'В каталог' : 'Смотреть модели',
         BannerDestinationKind.website => 'Подробнее на сайте',
@@ -36,6 +37,11 @@ class BannerDestination {
       return BannerDestination(BannerDestinationKind.newStore, uri);
     }
     final path = '/${uri.pathSegments.where((s) => s.isNotEmpty).join('/')}/';
+    if (path == '/news/' ||
+        (uri.pathSegments.where((s) => s.isNotEmpty).length == 2 &&
+            uri.pathSegments.first == 'news')) {
+      return BannerDestination(BannerDestinationKind.news, uri);
+    }
     if (path == '/catalog/') {
       return BannerDestination(BannerDestinationKind.catalog, uri);
     }

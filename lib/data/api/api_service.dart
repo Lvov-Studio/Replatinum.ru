@@ -551,9 +551,12 @@ class ApiService {
     }
   }
 
-  Future<List<NewsItem>> getNews({int limit = 8}) async {
-    final response =
-        await _dio.get('get_news.php', queryParameters: {'limit': limit});
+  Future<List<NewsItem>> getNews({int limit = 8}) async =>
+      (await getNewsPage(limit: limit)).items;
+
+  Future<NewsPage> getNewsPage({int limit = 20, int page = 1}) async {
+    final response = await _dio
+        .get('get_news.php', queryParameters: {'limit': limit, 'page': page});
     if (response.statusCode != 200) {
       throw Exception('Failed to load news');
     }
@@ -561,8 +564,23 @@ class ApiService {
     if (json['status'] != 'success' || json['data'] is! List) {
       throw const FormatException('Invalid news response');
     }
-    return (json['data'] as List)
-        .map((item) => NewsItem.fromJson(item as Map<String, dynamic>))
-        .toList();
+    return NewsPage(
+        (json['data'] as List)
+            .map((item) => NewsItem.fromJson(item as Map<String, dynamic>))
+            .toList(),
+        json['has_more'] == true);
+  }
+
+  Future<NewsItem> getArticle(String code) async {
+    final response =
+        await _dio.get('get_news.php', queryParameters: {'code': code});
+    final Map<String, dynamic> json = response.data;
+    if (json['status'] != 'success' ||
+        json['data'] is! List ||
+        (json['data'] as List).isEmpty) {
+      throw const FormatException('Article unavailable');
+    }
+    return NewsItem.fromJson(
+        (json['data'] as List).first as Map<String, dynamic>);
   }
 }
