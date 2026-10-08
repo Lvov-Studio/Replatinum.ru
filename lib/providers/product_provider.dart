@@ -173,14 +173,17 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<void> fetchProducts(
-      {Category? category, String? type, bool force = false}) async {
+      {Category? category,
+      String? type,
+      bool force = false,
+      CatalogNode? subsection}) async {
     final requestId = ++_requestId;
     _isLoading = true;
     _error = '';
     _selectedCategory = category;
-    _path = null;
-    _subsectionTitle = null;
-    _browsing = true;
+    _path = subsection?.path;
+    _subsectionTitle = subsection?.title;
+    _browsing = subsection == null;
     _type = type;
     _items = [];
     _filters = const CatalogFilters();
@@ -224,8 +227,11 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> retry() =>
-      fetchProducts(category: _selectedCategory, type: _type, force: true);
+  Future<void> retry() => fetchProducts(
+      category: _selectedCategory,
+      type: _type,
+      force: true,
+      subsection: _path == null ? null : CatalogNode(_path!, sectionTitle));
   Future<void> loadMore() async {
     _visible += 20;
     notifyListeners();

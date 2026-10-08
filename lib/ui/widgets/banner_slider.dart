@@ -6,16 +6,24 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/api/api_service.dart';
 import '../../data/models/banner_model.dart';
+import '../../data/banner_destination.dart';
+import '../screens/banner_catalog_screen.dart';
+import '../screens/info_screens.dart';
+import '../screens/main_screen.dart';
 
 class BannerSlider extends StatefulWidget {
-  const BannerSlider({super.key});
+  const BannerSlider({super.key, this.apiService});
+
+  final ApiService? apiService;
 
   @override
   State<BannerSlider> createState() => _BannerSliderState();
 }
 
 class _BannerSliderState extends State<BannerSlider> {
-  final ApiService _apiService = ApiService();
+  late final ApiService _apiService = widget.apiService ?? ApiService();
+  final _carousel = CarouselSliderController();
+  bool _opening = false;
   late Future<List<BannerModel>> _bannersFuture;
   int _currentIndex = 0;
 
@@ -33,30 +41,46 @@ class _BannerSliderState extends State<BannerSlider> {
   }
 
   Future<void> _openBanner(BannerModel banner) async {
-    if (banner.link.isEmpty) return;
-    final uri = Uri.tryParse('https://replatinum.ru')?.resolve(banner.link);
-    if (uri == null ||
-        uri.scheme != 'https' ||
-        !const {'replatinum.ru', 'www.replatinum.ru'}.contains(uri.host)) {
-      return;
-    }
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось открыть страницу товара')),
-      );
+    final destination = BannerDestination.resolve(banner);
+    if (destination == null || _opening) return;
+    setState(() => _opening = true);
+    try {
+      if (destination.kind == BannerDestinationKind.newStore) {
+        await Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => const ContactsScreen(highlightNewStore: true)));
+      } else if (destination.kind == BannerDestinationKind.catalog) {
+        if (destination.categoryCode == null) {
+          MainScreen.of(context)?.switchToCatalog();
+        } else {
+          await Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => BannerCatalogScreen(
+                  destination: destination, apiService: _apiService)));
+        }
+      } else {
+        final opened = await launchUrl(destination.uri,
+            mode: LaunchMode.externalApplication);
+        if (!opened && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Не удалось открыть страницу')));
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    final height = 144.0 +
+        (MediaQuery.textScalerOf(context).scale(17) - 17).clamp(0, 34) * 7;
     return FutureBuilder<List<BannerModel>>(
       future: _bannersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 148,
-            child: Center(child: CircularProgressIndicator()),
+          return SizedBox(
+            height: height,
+            child: const Center(child: CircularProgressIndicator()),
           );
         }
         if (snapshot.hasError) {
@@ -69,11 +93,13 @@ class _BannerSliderState extends State<BannerSlider> {
         return Column(
           children: [
             CarouselSlider.builder(
+              carouselController: _carousel,
               itemCount: banners.length,
               options: CarouselOptions(
-                height: 148,
+                height: height,
                 viewportFraction: 1,
-                autoPlay: banners.length > 1,
+                autoPlay: banners.length > 1 && !reducedMotion && !_opening,
+                enableInfiniteScroll: banners.length > 1,
                 autoPlayInterval: const Duration(seconds: 5),
                 autoPlayAnimationDuration: const Duration(milliseconds: 450),
                 onPageChanged: (index, _) {
@@ -82,6 +108,7 @@ class _BannerSliderState extends State<BannerSlider> {
               ),
               itemBuilder: (context, index, _) {
                 final banner = banners[index];
+                final destination = BannerDestination.resolve(banner);
                 // The website uses MOBILE_IMAGE first, then PREVIEW_PICTURE.
                 final imageUrl = banner.displayImage;
 
@@ -92,7 +119,8 @@ class _BannerSliderState extends State<BannerSlider> {
                     borderRadius: BorderRadius.circular(16),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: banner.link.isEmpty
+                      key: ValueKey('banner-${banner.id}'),
+                      onTap: destination == null
                           ? null
                           : () => _openBanner(banner),
                       child: Stack(
@@ -125,7 +153,7 @@ class _BannerSliderState extends State<BannerSlider> {
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: SizedBox(
-                                  width: constraints.maxWidth * 0.60,
+                                  width: constraints.maxWidth * 0.64,
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment:
@@ -148,47 +176,27 @@ class _BannerSliderState extends State<BannerSlider> {
                                         banner.title,
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 17,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.w700,
-                                          height: 1.15,
+                                          height: 1.2,
                                         ),
-                                        maxLines: 2,
+                                        maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      if (banner.link.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primaryAccent,
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                          child: const Padding(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 14),
-                                            child: SizedBox(
-                                              height: 38,
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Text('Купить',
-                                                      style: TextStyle(
-                                                        color:
-                                                            AppColors.onPrimary,
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                      )),
-                                                  SizedBox(width: 4),
-                                                  Icon(Icons.arrow_forward,
-                                                      size: 14,
-                                                      color:
-                                                          AppColors.onPrimary),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
+                                      if (destination != null) ...[
+                                        const SizedBox(height: 12),
+                                        Row(children: [
+                                          Flexible(
+                                              child: Text(
+                                                  destination.actionLabel,
+                                                  style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      height: 1.3))),
+                                          const SizedBox(width: 6),
+                                          const Icon(Icons.arrow_forward,
+                                              size: 14, color: Colors.white),
+                                        ]),
                                       ],
                                     ],
                                   ),
@@ -205,21 +213,44 @@ class _BannerSliderState extends State<BannerSlider> {
             ),
             if (banners.length > 1)
               Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                padding: const EdgeInsets.only(top: 4),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
                   children: List.generate(banners.length, (index) {
                     final selected = index == _currentIndex;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: selected ? 20 : 6,
-                      height: 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? AppColors.primaryAccent
-                            : AppColors.border,
-                        borderRadius: BorderRadius.circular(3),
+                    return Semantics(
+                      button: true,
+                      selected: selected,
+                      label:
+                          'Баннер ${index + 1} из ${banners.length}: ${banners[index].title}',
+                      child: InkWell(
+                        key: ValueKey('banner-dot-$index'),
+                        onTap: () {
+                          if (reducedMotion) {
+                            _carousel.jumpToPage(index);
+                          } else {
+                            _carousel.animateToPage(index,
+                                duration: const Duration(milliseconds: 250));
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: SizedBox(
+                          width: 40,
+                          height: 44,
+                          child: Center(
+                              child: AnimatedContainer(
+                            duration: reducedMotion
+                                ? Duration.zero
+                                : const Duration(milliseconds: 200),
+                            width: selected ? 18 : 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                                color: selected
+                                    ? AppColors.primaryAccent
+                                    : AppColors.secondaryText,
+                                borderRadius: BorderRadius.circular(3)),
+                          )),
+                        ),
                       ),
                     );
                   }),

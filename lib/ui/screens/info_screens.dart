@@ -181,7 +181,8 @@ class WarrantyScreen extends StatelessWidget {
 // КОНТАКТЫ
 // ═══════════════════════════════════════════════════════════════════════════
 class ContactsScreen extends StatelessWidget {
-  const ContactsScreen({super.key});
+  const ContactsScreen({super.key, this.highlightNewStore = false});
+  final bool highlightNewStore;
 
   void _call() async {
     final uri = Uri(scheme: 'tel', path: '+79180072333');
@@ -203,6 +204,33 @@ class ContactsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (highlightNewStore) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: buyerAppBar(context, 'Новый Replatinum'),
+        body: ListView(padding: const EdgeInsets.all(16), children: [
+          _ContactCard(
+            icon: Icons.storefront_outlined,
+            label: 'Магазин на Северной',
+            value: 'Краснодар, ул. Северная, 364',
+            note: 'Открытие — 16 октября 2026 года',
+            onTap: () => launchUrl(
+                Uri.https('yandex.ru', '/maps/',
+                    {'text': 'Краснодар, Северная, 364'}),
+                mode: LaunchMode.externalApplication),
+            actionLabel: 'Показать на карте',
+          ),
+          const SizedBox(height: 16),
+          _ContactCard(
+              icon: Icons.phone_outlined,
+              label: 'Связаться с Replatinum',
+              value: '+7 918 007 23 33',
+              note: 'Уточните информацию об открытии у менеджера.',
+              onTap: _call,
+              actionLabel: 'Позвонить'),
+        ]),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
       appBar: buyerAppBar(context, 'Контакты'),
@@ -833,11 +861,12 @@ class _ContactCard extends StatelessWidget {
                 child: Icon(icon, color: AppColors.primaryAccent, size: 18),
               ),
               const SizedBox(width: 10),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.secondaryText,
-                      fontWeight: FontWeight.w500)),
+              Expanded(
+                  child: Text(label,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.secondaryText,
+                          fontWeight: FontWeight.w500))),
             ]),
             const SizedBox(height: 10),
             // Значение
@@ -878,7 +907,7 @@ class _ContactCard extends StatelessWidget {
   }
 
   IconData _iconForAction(String label) {
-    if (label.contains('Карт')) return Icons.map_outlined;
+    if (label.toLowerCase().contains('карт')) return Icons.map_outlined;
     if (label.contains('Позвонить')) return Icons.phone_outlined;
     if (label.contains('Написать')) return Icons.email_outlined;
     return Icons.arrow_forward_ios;
