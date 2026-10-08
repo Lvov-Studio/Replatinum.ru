@@ -247,37 +247,48 @@ class _AccountScreenState extends State<AccountScreen> {
       case AccountStep.code:
         return [
           const Text('Введите код из SMS',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
           Text('Код отправлен на +${account.phone}',
-              style: const TextStyle(height: 1.5)),
-          TextButton(
-              onPressed: account.busy ? null : account.changePhone,
-              child: const Text('Изменить номер')),
-          const SizedBox(height: 16),
-          Center(
+              style: const TextStyle(fontSize: 14, height: 1.4)),
+          Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                  onPressed: account.busy ? null : account.changePhone,
+                  child: const Text('Изменить номер'))),
+          const SizedBox(height: 8),
+          Align(
+              alignment: Alignment.centerLeft,
               child: SizedBox(
-                  width: 220,
+                  width: 168,
                   child: TextField(
+                      key: const ValueKey('sms-code'),
                       controller: code,
                       enabled: !account.busy,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       autofillHints: const [AutofillHints.oneTimeCode],
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 24, letterSpacing: 6),
+                      style: const TextStyle(fontSize: 22, letterSpacing: 5),
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(4)
                       ],
                       decoration: const InputDecoration(
+                          isDense: true,
                           contentPadding: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          labelText: 'Код из SMS',
-                          border: OutlineInputBorder()),
+                              horizontal: 12, vertical: 12),
+                          labelText: 'Код из SMS'),
                       onSubmitted: (_) => account.verifyCode(code.text)))),
-          const SizedBox(height: 16),
-          _button('Войти',
-              account.busy ? null : () => account.verifyCode(code.text)),
+          const SizedBox(height: 12),
+          FilledButton(
+              onPressed:
+                  account.busy ? null : () => account.verifyCode(code.text),
+              style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              child: const Text('Войти')),
           TextButton(
               onPressed: account.busy || account.resendSeconds > 0
                   ? null

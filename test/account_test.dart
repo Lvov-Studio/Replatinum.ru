@@ -221,6 +221,15 @@ void main() {
       await account.sendCode('9991234567');
       await tester.pumpAndSettle();
       expect(find.text('Введите код из SMS'), findsOneWidget);
+      expect(tester.getSize(find.byKey(const ValueKey('sms-code'))).width, 168);
+      await tester.enterText(find.byKey(const ValueKey('sms-code')), '12a345');
+      expect(
+          tester
+              .widget<TextField>(find.byKey(const ValueKey('sms-code')))
+              .controller!
+              .text,
+          '1234');
+      expect(tester.takeException(), isNull);
       await account.verifyCode('1234');
       await tester.pumpAndSettle();
       expect(find.text('Завершим знакомство'), findsOneWidget);

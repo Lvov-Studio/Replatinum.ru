@@ -288,24 +288,13 @@ class ApiService {
   }
 
   Future<List<Product>> getHomeProducts(String type) async {
-    final parents = <Product>[];
-    var offset = 0;
-    while (true) {
-      final page = await getProducts(type: type, limit: 50, offset: offset);
-      final items = page['products'] as List<Product>;
-      parents.addAll(items);
-      offset += items.length;
-      if (items.isEmpty || offset >= (page['total'] as num)) break;
-    }
+    // Home is a preview shelf. The full section has its own catalog screen.
+    final page = await getProducts(type: type, limit: 12);
+    final parents = page['products'] as List<Product>;
     final code =
         {'new': 'NEWPRODUCT', 'hit': 'SALELEADER', 'sale': 'DISCOUNT'}[type]!;
-    final result = <Product>[];
-    // V2 already returns selected SKUs; legacy returns parent products.
-    for (final parent in parents) {
-      if (parent.offerId != null) {
-        result.add(parent);
-        continue;
-      }
+    Future<List<Product>> resolve(Product parent) async {
+      if (parent.offerId != null) return [parent];
       final detail = await getProductDetail(parent.id);
       final previewParent = parent.copyWith(
           ruStoreWarning: parent.ruStoreWarning || detail.ruStoreWarning);
@@ -315,23 +304,30 @@ class ApiService {
               const ['да', 'y', 'yes', 'true', '1']
                   .contains(p.value.toLowerCase())))
           .toList();
-      if (marked.isEmpty) {
-        final priced = detail.offers.where((o) => o.price > 0).toList()
-          ..sort((a, b) => a.price.compareTo(b.price));
-        if (priced.isEmpty) {
-          result.add(previewParent);
-        } else {
-          result.add(_offerPreview(previewParent, priced.first));
-        }
-      } else {
-        result.addAll(marked.map((o) => _offerPreview(previewParent, o)));
+      if (marked.isNotEmpty) {
+        return marked.map((o) => _offerPreview(previewParent, o)).toList();
       }
+      final priced = detail.offers.where((o) => o.price > 0).toList()
+        ..sort((a, b) => a.price.compareTo(b.price));
+      return [
+        priced.isEmpty
+            ? previewParent
+            : _offerPreview(previewParent, priced.first)
+      ];
+    }
+
+    final result = <Product>[];
+    // Bound concurrency without serializing every model or flooding the host.
+    for (var start = 0; start < parents.length; start += 4) {
+      final groups =
+          await Future.wait(parents.skip(start).take(4).map(resolve));
+      result.addAll(groups.expand((group) => group));
     }
     final unique = <String, Product>{};
     for (final product in result) {
       unique['${product.id}:${product.offerId ?? 'base'}'] = product;
     }
-    return unique.values.toList();
+    return unique.values.take(12).toList();
   }
 
   Product _offerPreview(Product parent, Offer offer) => Product(

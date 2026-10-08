@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:platinumstore_app/data/api/api_service.dart';
 import 'package:platinumstore_app/data/models/product_detail_model.dart';
@@ -47,8 +48,67 @@ class PreviewApi extends ApiService {
           : []);
 }
 
+class BoundedHomeApi extends ApiService {
+  final requests = <(int, int)>[];
+  final pending = <String, Completer<ProductDetail>>{};
+  @override
+  Future<Map<String, dynamic>> getProducts(
+      {String? categoryId,
+      String? type,
+      int limit = 10,
+      int offset = 0}) async {
+    requests.add((limit, offset));
+    return {
+      'products': [
+        for (var i = 0; i < 12; i++)
+          Product(id: '$i', name: 'Device $i', price: 100, image: '')
+      ],
+      'total': 1000
+    };
+  }
+
+  @override
+  Future<ProductDetail> getProductDetail(String id) {
+    final completer = Completer<ProductDetail>();
+    pending[id] = completer;
+    return completer.future;
+  }
+
+  void finishBatch() {
+    for (final entry in pending.entries.toList()) {
+      if (!entry.value.isCompleted) {
+        entry.value.complete(ProductDetail(
+            id: entry.key,
+            name: 'Device',
+            price: 100,
+            description: '',
+            images: [],
+            offers: []));
+      }
+    }
+  }
+}
+
 void main() {
   group('Home product preview', () {
+    test('should bound home requests and resolve four models concurrently',
+        () async {
+      final api = BoundedHomeApi();
+      final result = api.getHomeProducts('new');
+      await Future<void>.delayed(Duration.zero);
+      expect(api.requests, [(12, 0)]);
+      expect(api.pending.keys, ['0', '1', '2', '3']);
+      api.finishBatch();
+      await Future<void>.delayed(Duration.zero);
+      expect(api.pending.length, 8);
+      api.finishBatch();
+      await Future<void>.delayed(Duration.zero);
+      expect(api.pending.length, 12);
+      api.finishBatch();
+      expect(await result, hasLength(12));
+      expect(api.requests, hasLength(1));
+    });
+
     for (final (marked, hasOffers) in [
       (true, true),
       (false, true),
