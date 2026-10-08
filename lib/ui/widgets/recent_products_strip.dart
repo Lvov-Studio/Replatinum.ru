@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'product_thumbnail.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../../providers/recent_products_provider.dart';
@@ -56,11 +56,7 @@ class RecentProductsStrip extends StatelessWidget {
                           child: product.image.isEmpty
                               ? const Icon(Icons.image_outlined,
                                   color: AppColors.secondaryText)
-                              : CachedNetworkImage(
-                                  imageUrl: product.image,
-                                  fit: BoxFit.contain,
-                                  errorWidget: (_, __, ___) =>
-                                      const Icon(Icons.image_outlined))),
+                              : ProductThumbnail(url: product.image)),
                       const SizedBox(width: 12),
                       Expanded(
                           child: Column(

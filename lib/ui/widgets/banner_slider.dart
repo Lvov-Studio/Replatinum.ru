@@ -21,17 +21,36 @@ class BannerSlider extends StatefulWidget {
   State<BannerSlider> createState() => _BannerSliderState();
 }
 
-class _BannerSliderState extends State<BannerSlider> {
+class _BannerSliderState extends State<BannerSlider>
+    with WidgetsBindingObserver {
   late final ApiService _apiService = widget.apiService ?? ApiService();
   final _carousel = CarouselSliderController();
   bool _opening = false;
   late Future<List<BannerModel>> _bannersFuture;
   int _currentIndex = 0;
+  bool _foreground = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _foreground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
     _bannersFuture = _apiService.getBanners();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final foreground = state == AppLifecycleState.resumed;
+    if (foreground != _foreground) {
+      setState(() => _foreground = foreground);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   void _retry() {
@@ -78,6 +97,9 @@ class _BannerSliderState extends State<BannerSlider> {
   @override
   Widget build(BuildContext context) {
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    final active = _foreground &&
+        TickerMode.valuesOf(context).enabled &&
+        (ModalRoute.of(context)?.isCurrent ?? true);
     final height = 144.0 +
         (MediaQuery.textScalerOf(context).scale(17) - 17).clamp(0, 34) * 7;
     return FutureBuilder<List<BannerModel>>(
@@ -104,10 +126,12 @@ class _BannerSliderState extends State<BannerSlider> {
               options: CarouselOptions(
                 height: height,
                 viewportFraction: 1,
-                autoPlay: banners.length > 1 && !reducedMotion && !_opening,
+                autoPlay:
+                    banners.length > 1 && active && !reducedMotion && !_opening,
                 enableInfiniteScroll: banners.length > 1,
                 autoPlayInterval: const Duration(seconds: 5),
                 autoPlayAnimationDuration: const Duration(milliseconds: 450),
+                autoPlayCurve: Curves.easeOutCubic,
                 onPageChanged: (index, _) {
                   setState(() => _currentIndex = index);
                 },

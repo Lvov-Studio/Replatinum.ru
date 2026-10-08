@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'product_thumbnail.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../../data/models/product_model.dart';
@@ -85,9 +85,14 @@ class HomeShowcaseCarousel extends StatelessWidget {
                 ])),
             Builder(builder: (context) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(
-                    height: 100,
-                    child: Center(child: CircularProgressIndicator()));
+                final width = (MediaQuery.sizeOf(context).width * .41)
+                    .clamp(130.0, 190.0);
+                final scale = MediaQuery.textScalerOf(context).scale(1);
+                // Reserve the shelf's final height so loaded photos do not
+                // push content beneath the user's finger during scrolling.
+                return SizedBox(
+                    height: width + 68 + (scale - 1).clamp(0, 3) * 64,
+                    child: const Center(child: CircularProgressIndicator()));
               }
               if (snapshot.hasError) {
                 return Padding(
@@ -162,11 +167,7 @@ class _ShowcaseCard extends StatelessWidget {
                                 child: product.image.isEmpty
                                     ? const Icon(Icons.image_outlined,
                                         color: AppColors.secondaryText)
-                                    : CachedNetworkImage(
-                                        imageUrl: product.image,
-                                        fit: BoxFit.contain,
-                                        errorWidget: (_, __, ___) =>
-                                            const Icon(Icons.image_outlined)))),
+                                    : ProductThumbnail(url: product.image))),
                         Positioned(top: 8, left: 8, child: ProductBadge(badge)),
                         Positioned(
                             top: 0,

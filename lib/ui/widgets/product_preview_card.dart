@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'product_thumbnail.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../../data/models/product_model.dart';
@@ -74,13 +74,9 @@ class ProductPreviewCard extends StatelessWidget {
                           padding: EdgeInsets.fromLTRB(
                               10, 0, product.ruStoreWarning ? 30 : 10, 10),
                           child: product.image.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: product.image,
-                                  fit: BoxFit.contain,
-                                  alignment: Alignment.topCenter,
-                                  errorWidget: (_, __, ___) => const Icon(
-                                      Icons.image_outlined,
-                                      color: AppColors.secondaryText))
+                              ? ProductThumbnail(
+                                  url: product.image,
+                                  alignment: Alignment.topCenter)
                               : const Icon(Icons.image_outlined,
                                   color: AppColors.secondaryText)),
                       if (product.ruStoreWarning)

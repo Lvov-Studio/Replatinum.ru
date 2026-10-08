@@ -14,6 +14,18 @@ class ProductProvider extends ChangeNotifier {
   final _sections = <(String?, String?), (DateTime, List<CatalogItem>)>{};
   static const cacheLifetime = Duration(minutes: 2);
   List<CatalogItem> _items = [];
+  List<CatalogItem>? _filteredCache;
+  Map<String, (String, List<String>)>? _facetsCache;
+
+  // One immutable result per catalog state, reused by products/count/load-more.
+  // Every mutation already notifies, including progressive API responses.
+  @override
+  void notifyListeners() {
+    _filteredCache = null;
+    _facetsCache = null;
+    super.notifyListeners();
+  }
+
   String? _path;
   String? _subsectionTitle;
   bool _browsing = true;
@@ -90,6 +102,7 @@ class ProductProvider extends ChangeNotifier {
       _filtered.take(_visible).map((item) => item.product).toList();
 
   List<CatalogItem> get _filtered {
+    if (_filteredCache != null) return _filteredCache!;
     final result = _baseItems.where((item) => item.matches(_filters)).toList();
     switch (_sort) {
       case CatalogSort.original:
@@ -104,11 +117,12 @@ class ProductProvider extends ChangeNotifier {
       case CatalogSort.name:
         result.sort((a, b) => a.product.name.compareTo(b.product.name));
     }
-    return result;
+    return _filteredCache = List.unmodifiable(result);
   }
 
   Map<String, (String, List<String>)> get facets {
     if (_isLoading || _error.isNotEmpty) return {};
+    if (_facetsCache != null) return _facetsCache!;
     final labels = <String, String>{};
     final values = <String, Set<String>>{};
     for (final item in _baseItems) {
@@ -144,9 +158,13 @@ class ProductProvider extends ChangeNotifier {
             '$label · ${key.startsWith('model:') ? 'модель' : 'вариант'}';
       }
     }
-    return {
-      for (final key in keys) key: (labels[key]!, values[key]!.toList()..sort())
-    };
+    return _facetsCache = Map.unmodifiable({
+      for (final key in keys)
+        key: (
+          labels[key]!,
+          List<String>.unmodifiable(values[key]!.toList()..sort())
+        )
+    });
   }
 
   (double, double) get priceBounds {

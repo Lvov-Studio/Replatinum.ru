@@ -10,6 +10,7 @@ import '../../providers/product_provider.dart';
 import '../../data/models/category_model.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/burger_menu.dart';
+import '../widgets/navigation_tab_surface.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -233,39 +234,31 @@ class _TabItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = currentIndex == index;
     return Expanded(
-      child: GestureDetector(
+      child: NavigationTabSurface(
+        selected: isActive,
+        color: activeColor,
         onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-          decoration: BoxDecoration(
-            color: isActive
-                ? activeColor.withValues(alpha: 0.11)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isActive ? activeIcon : icon,
+              color: isActive ? activeColor : inactiveColor,
+              size: 22,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
                 color: isActive ? activeColor : inactiveColor,
-                size: 22,
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: isActive ? activeColor : inactiveColor,
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -292,75 +285,67 @@ class _CartTabItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = currentIndex == index;
     return Expanded(
-      child: GestureDetector(
+      child: NavigationTabSurface(
+        selected: isActive,
+        color: activeColor,
         onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-          decoration: BoxDecoration(
-            color: isActive
-                ? activeColor.withValues(alpha: 0.11)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Consumer<CartProvider>(
-                builder: (context, cart, _) {
-                  return Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Icon(
-                        isActive
-                            ? Icons.shopping_bag
-                            : Icons.shopping_bag_outlined,
-                        color: isActive ? activeColor : inactiveColor,
-                        size: 22,
-                      ),
-                      if (cart.itemCount > 0)
-                        Positioned(
-                          right: -6,
-                          top: -4,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: activeColor,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: const Color(0xFF1E1E26), width: 1.5),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Consumer<CartProvider>(
+              builder: (context, cart, _) {
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      isActive
+                          ? Icons.shopping_bag
+                          : Icons.shopping_bag_outlined,
+                      color: isActive ? activeColor : inactiveColor,
+                      size: 22,
+                    ),
+                    if (cart.itemCount > 0)
+                      Positioned(
+                        right: -6,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: activeColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: const Color(0xFF1E1E26), width: 1.5),
+                          ),
+                          constraints:
+                              const BoxConstraints(minWidth: 16, minHeight: 16),
+                          child: Text(
+                            '${cart.itemCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
                             ),
-                            constraints: const BoxConstraints(
-                                minWidth: 16, minHeight: 16),
-                            child: Text(
-                              '${cart.itemCount}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                    ],
-                  );
-                },
+                      ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Корзина',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isActive ? activeColor : inactiveColor,
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Корзина',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: isActive ? activeColor : inactiveColor,
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
