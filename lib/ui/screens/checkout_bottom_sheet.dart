@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/cart_provider.dart';
 import '../widgets/cart_price_summary.dart';
+import '../widgets/checkout_order_item.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../../features/account/ui/russian_phone_formatter.dart';
@@ -412,12 +413,10 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                                                 _heading('Ваш заказ'),
                                                 for (final item in checkout
                                                     .cart.selectedItems)
-                                                  Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 12),
-                                                      child: Text(
-                                                          '${item.product.name}${item.variantLabel.isEmpty ? '' : '\n${item.variantLabel}'}\n${item.quantity} шт. · ${formatPrice(checkout.cart.lineTotalFor(item))}')),
+                                                  CheckoutOrderItem(
+                                                      item: item,
+                                                      total: checkout.cart
+                                                          .lineTotalFor(item)),
                                                 CartPriceSummary(
                                                     cart: checkout.cart),
                                                 if (checkout.deliveryMinor > 0)
