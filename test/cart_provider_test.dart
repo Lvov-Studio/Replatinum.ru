@@ -16,6 +16,32 @@ CartQuote quote(String id, int total, {int discount = 0}) => CartQuote(
 
 void main() {
   group('CartProvider', () {
+    test('website savings include store price and server promotion once',
+        () async {
+      final cart = CartProvider(
+          quoteLoader: (_) async => const CartQuote(
+              id: 'discount',
+              subtotalMinor: 200000,
+              discountMinor: 20000,
+              totalMinor: 180000,
+              unitPrices: {'1': 1000},
+              lineTotalsMinor: {'1': 180000}));
+      cart.addItem(Product(
+          id: '1',
+          name: 'Аксессуар',
+          price: 1000,
+          storePrice: 1200,
+          image: ''));
+      cart.incrementQuantity(cart.items.keys.single);
+      await Future<void>.delayed(Duration.zero);
+      expect(cart.displaySubtotal, 2400);
+      expect(cart.displayDiscount, 600);
+      expect(cart.totalAmount, 1800);
+      expect(cart.lineTotalFor(cart.selectedItems.single), 1800);
+      cart.selectAll(false);
+      expect(cart.displayDiscount, 0);
+      cart.dispose();
+    });
     test(
         'selection affects quote and checkout; submitted items alone are removed',
         () async {

@@ -7,6 +7,11 @@ import '../models/news_model.dart';
 import '../models/cart_quote.dart';
 import '../models/catalog_filter.dart';
 
+class CartApiFailure implements Exception {
+  const CartApiFailure(this.message);
+  final String message;
+}
+
 class ApiService {
   late final Dio _dio;
   bool _compactCatalogEnabled;
@@ -411,11 +416,22 @@ class ApiService {
   }
 
   Future<CartQuote> quoteCart(List<Map<String, dynamic>> items) async {
-    final response = await _dio.post('quote_cart.php', data: {'items': items});
-    if (response.data is! Map || response.data['status'] != 'success') {
-      throw const FormatException('Cart quote unavailable');
+    try {
+      final response =
+          await _dio.post('quote_cart.php', data: {'items': items});
+      if (response.data is! Map || response.data['status'] != 'success') {
+        throw CartApiFailure(response.data is Map
+            ? '${response.data['message'] ?? 'Не удалось проверить корзину.'}'
+            : 'Не удалось проверить корзину.');
+      }
+      return CartQuote.fromJson(
+          Map<String, dynamic>.from(response.data['data']));
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      throw CartApiFailure(data is Map && data['message'] is String
+          ? data['message'] as String
+          : 'Нет связи с сервером. Повторите проверку корзины.');
     }
-    return CartQuote.fromJson(Map<String, dynamic>.from(response.data['data']));
   }
 
   Future<bool> createOrder(

@@ -7,14 +7,18 @@ import '../../data/cart_recommendations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/price_formatter.dart';
 import '../widgets/empty_cart_view.dart';
+import '../widgets/cart_price_summary.dart';
 import 'checkout_bottom_sheet.dart';
 import 'main_screen.dart';
 import 'product_detail_screen.dart';
 import 'success_screen.dart';
+import '../../features/checkout/data/checkout_gateway.dart';
 
 class CartScreen extends StatefulWidget {
   final CartRecommendations? recommendations;
-  const CartScreen({super.key, this.recommendations});
+  final CheckoutGateway Function()? checkoutGatewayFactory;
+  const CartScreen(
+      {super.key, this.recommendations, this.checkoutGatewayFactory});
   @override
   State<CartScreen> createState() => _CartScreenState();
 }
@@ -22,15 +26,12 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   late final _recommendations = widget.recommendations ?? CartRecommendations();
   Future<void> _checkout() async {
-    final completed = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const CheckoutBottomSheet(),
-    );
-    if (!mounted || completed != true) return;
-    await Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const SuccessScreen()));
+    final orderId = await Navigator.of(context).push<int>(MaterialPageRoute(
+        builder: (_) => CheckoutBottomSheet(
+            gateway: widget.checkoutGatewayFactory?.call())));
+    if (!mounted || orderId == null) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => SuccessScreen(orderId: orderId)));
     if (mounted) MainScreen.of(context)?.switchToTab(MainScreen.homeTab);
   }
 
@@ -52,6 +53,11 @@ class _CartScreenState extends State<CartScreen> {
           return ListView(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
               children: [
+                if (cart.storageError.isNotEmpty)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(cart.storageError,
+                          style: const TextStyle(color: AppColors.error))),
                 _CartPanel(
                     child: Row(children: [
                   Checkbox(
@@ -86,17 +92,7 @@ class _CartScreenState extends State<CartScreen> {
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700)),
                               const SizedBox(height: 14),
-                              _AmountRow('${cart.selectedCount} шт. на сумму',
-                                  formatPrice(cart.subtotal)),
-                              if (cart.discountAmount > 0) ...[
-                                const SizedBox(height: 10),
-                                _AmountRow(
-                                    cart.quote!.promotionName.isEmpty
-                                        ? 'Скидка'
-                                        : cart.quote!.promotionName,
-                                    '− ${formatPrice(cart.discountAmount)}',
-                                    discount: true),
-                              ],
+                              CartPriceSummary(cart: cart),
                               const Divider(
                                   height: 24, color: AppColors.border),
                               _AmountRow(
@@ -116,13 +112,6 @@ class _CartScreenState extends State<CartScreen> {
                                 const Padding(
                                     padding: EdgeInsets.only(top: 12),
                                     child: LinearProgressIndicator()),
-                              if (cart.quote?.hint.isNotEmpty == true)
-                                Padding(
-                                    padding: const EdgeInsets.only(top: 12),
-                                    child: Text(cart.quote!.hint,
-                                        style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.secondaryText))),
                               if (cart.quoteError.isNotEmpty) ...[
                                 Text(cart.quoteError,
                                     style: const TextStyle(
@@ -133,8 +122,10 @@ class _CartScreenState extends State<CartScreen> {
                               ],
                               const SizedBox(height: 14),
                               ElevatedButton(
-                                  onPressed:
-                                      cart.canCheckout ? _checkout : null,
+                                  onPressed: cart.canCheckout ||
+                                          cart.pendingCheckout != null
+                                      ? _checkout
+                                      : null,
                                   style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.darkAccent,
                                       foregroundColor: Colors.white,
@@ -144,8 +135,11 @@ class _CartScreenState extends State<CartScreen> {
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(8))),
-                                  child: const Text('Оформить заказ',
-                                      style: TextStyle(
+                                  child: Text(
+                                      cart.pendingCheckout != null
+                                          ? 'Проверить заказ'
+                                          : 'Оформить заказ',
+                                      style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600))),
                             ]))),
@@ -168,9 +162,8 @@ class _CartPanel extends StatelessWidget {
 
 class _AmountRow extends StatelessWidget {
   final String label, amount;
-  final bool total, discount;
-  const _AmountRow(this.label, this.amount,
-      {this.total = false, this.discount = false});
+  final bool total;
+  const _AmountRow(this.label, this.amount, {this.total = false});
   @override
   Widget build(BuildContext context) =>
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -184,7 +177,7 @@ class _AmountRow extends StatelessWidget {
             style: TextStyle(
                 fontSize: total ? 22 : 14,
                 fontWeight: FontWeight.w700,
-                color: discount ? AppColors.benefit : AppColors.mainText))
+                color: AppColors.mainText))
       ]);
 }
 

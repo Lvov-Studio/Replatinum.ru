@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 class SuccessScreen extends StatelessWidget {
-  const SuccessScreen({super.key});
+  const SuccessScreen({super.key, this.orderId});
+  final int? orderId;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +28,9 @@ class SuccessScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
+              if (orderId != null)
+                Text('Заказ №$orderId',
+                    style: Theme.of(context).textTheme.titleMedium),
               Text(
                 'Наш менеджер скоро свяжется с вами для подтверждения заказа.',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(

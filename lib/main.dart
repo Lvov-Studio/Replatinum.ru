@@ -7,13 +7,15 @@ import 'providers/product_provider.dart';
 import 'providers/saved_products_provider.dart';
 import 'providers/recent_products_provider.dart';
 import 'ui/screens/main_screen.dart';
+import 'data/cart_storage.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
-        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(
+            create: (_) => CartProvider(storage: FileCartStorage())..load()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => SavedProductsProvider()..load()),
         ChangeNotifierProvider(create: (_) => RecentProductsProvider()..load()),

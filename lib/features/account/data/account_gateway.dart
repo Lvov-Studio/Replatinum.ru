@@ -5,9 +5,11 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 class AccountFailure implements Exception {
   const AccountFailure(this.message,
-      {this.unauthorized = false, this.cancelled = false});
+      {this.unauthorized = false,
+      this.cancelled = false,
+      this.uncertain = false});
   final String message;
-  final bool unauthorized, cancelled;
+  final bool unauthorized, cancelled, uncertain;
 }
 
 abstract class AccountGateway {
@@ -111,6 +113,7 @@ class SiteAccountGateway implements AccountGateway {
         } else {
           waiter.completeError(AccountFailure(
               '${data['error'] ?? 'Не удалось выполнить действие.'}',
+              uncertain: data['uncertain'] == true,
               unauthorized:
                   payload['status'] == 401 || payload['status'] == 403));
         }
@@ -134,7 +137,8 @@ class SiteAccountGateway implements AccountGateway {
     final result = response.future.timeout(
         Duration(seconds: action == 'send_code' ? 180 : 30),
         onTimeout: () => throw const AccountFailure(
-            'Не удалось подтвердить результат. Попробуйте позже.'));
+            'Не удалось подтвердить результат. Попробуйте позже.',
+            uncertain: true));
     _pending[id] = response;
     try {
       final values = await Future.wait<Object?>([

@@ -16,8 +16,10 @@ import 'account_controller.dart';
 import 'russian_phone_formatter.dart';
 
 class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key, this.controller});
+  const AccountScreen(
+      {super.key, this.controller, this.returnAfterLogin = false});
   final AccountController? controller;
+  final bool returnAfterLogin;
   @override
   State<AccountScreen> createState() => _AccountScreenState();
 }
@@ -29,6 +31,7 @@ class _AccountScreenState extends State<AccountScreen> {
   AccountSession? sharedSession;
   SavedProductsProvider? savedProducts;
   String? savedSession;
+  bool _returnScheduled = false;
   final phone = TextEditingController(text: RussianPhoneFormatter.prefix),
       code = TextEditingController();
   final name = TextEditingController(), lastName = TextEditingController();
@@ -72,6 +75,14 @@ class _AccountScreenState extends State<AccountScreen> {
 
   void _syncSession() {
     sharedSession?.update(account.step == AccountStep.account);
+    if (widget.returnAfterLogin &&
+        account.step == AccountStep.account &&
+        !_returnScheduled) {
+      _returnScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).pop(true);
+      });
+    }
     final saved = savedProducts;
     if (saved == null || !saved.ready) return;
     final session = account.step == AccountStep.account

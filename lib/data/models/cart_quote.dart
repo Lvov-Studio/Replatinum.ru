@@ -4,6 +4,7 @@ class CartQuote {
   final String id, promotionName, hint;
   final int subtotalMinor, discountMinor, totalMinor;
   final Map<String, num> unitPrices;
+  final Map<String, int> lineTotalsMinor;
 
   const CartQuote({
     required this.id,
@@ -13,6 +14,7 @@ class CartQuote {
     this.promotionName = '',
     this.hint = '',
     this.unitPrices = const {},
+    this.lineTotalsMinor = const {},
   });
 
   factory CartQuote.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,11 @@ class CartQuote {
       unitPrices: {
         for (final item in json['items'])
           '${item['id']}': parseNumber(item['unit_price_minor']) / 100,
+      },
+      lineTotalsMinor: {
+        for (final item in json['items'])
+          if (item['total_minor'] is num)
+            '${item['id']}': (item['total_minor'] as num).toInt(),
       },
     );
   }
